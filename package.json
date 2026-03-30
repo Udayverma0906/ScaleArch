@@ -3,7 +3,7 @@
   "displayName": "ScaleArch",
   "publisher": "UdayVerma",
   "description": "This extension will analyze code and gives suggestions to implements better system design patterns to the code for scalability and performance of architecture. Real-time static analysis for TypeScript & JavaScript. Catches DB anti-patterns, performance issues, SOLID violations, and code quality problems — without AI, without cost, without internet. ",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "icon": "./assets/images/extension.png",
   "repository": {
@@ -14,9 +14,17 @@
     "vscode": "^1.110.0"
   },
   "categories": [
-    "Other","Linters"
+    "Other",
+    "Linters"
   ],
-   "keywords": ["scalearch", "linter", "solid", "performance", "database", "code quality"],
+  "keywords": [
+    "scalearch",
+    "linter",
+    "solid",
+    "performance",
+    "database",
+    "code quality"
+  ],
   "activationEvents": [
     "onLanguage:typescript",
     "onLanguage:javascript",
@@ -32,7 +40,7 @@
         "title": "ScaleArch: Analyze Scalability"
       }
     ],
-     "configuration": {
+    "configuration": {
       "title": "ScaleArch",
       "properties": {
         "scalearch.enableDatabase": {
