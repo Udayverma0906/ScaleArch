@@ -96,7 +96,7 @@ No AI calls. No internet. Just fast, local, static analysis.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/scalearch.git
+git clone https://github.com/your-username/ScaleArch.git
 cd scalearch
 
 # 2. Install dependencies
