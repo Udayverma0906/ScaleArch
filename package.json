@@ -13,14 +13,15 @@
     "vscode": "^1.110.0"
   },
   "categories": [
-    "Other"
+    "Other","Linters"
   ],
+   "keywords": ["scalearch", "linter", "solid", "performance", "database", "code quality"],
   "activationEvents": [
     "onLanguage:typescript",
     "onLanguage:javascript",
-    "onLanguage:python",
-    "onLanguage:java",
-    "onLanguage:go"
+    "onLanguage:typescriptreact",
+    "onLanguage:javascriptreact",
+    "onLanguage:python"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -29,7 +30,52 @@
         "command": "scalearch.dbAnalyze",
         "title": "ScaleArch: Analyze Scalability"
       }
-    ]
+    ],
+     "configuration": {
+      "title": "ScaleArch",
+      "properties": {
+        "scalearch.enableDatabase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable database anti-pattern rules"
+        },
+        "scalearch.enablePerformance": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable performance rules"
+        },
+        "scalearch.enableSolid": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable SOLID principle rules"
+        },
+        "scalearch.enableSecurity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable security rules"
+        },
+        "scalearch.maxMethodsPerClass": {
+          "type": "number",
+          "default": 10,
+          "description": "SRP: max methods per class before warning"
+        },
+        "scalearch.maxFunctionLines": {
+          "type": "number",
+          "default": 20,
+          "description": "Max lines per function before warning"
+        },
+        "scalearch.maxCyclomaticComplexity": {
+          "type": "number",
+          "default": 5,
+          "description": "Max cyclomatic complexity before warning"
+        },
+        "scalearch.maxParams": {
+          "type": "number",
+          "default": 4,
+          "description": "Max function parameters before warning"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
