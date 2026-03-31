@@ -11,19 +11,21 @@ import {
 import { CUSTOM_AST_CHECKS, customWholeAstChecks } from '../rules/customRules';
 import { RuleResult } from '../rules/types';
 
-// Core per-node checks. To add a rule, edit src/rules/customRules.ts only.
-const PER_NODE_CHECKS = [
-  checkSRP,
-  checkDIP,
-  checkFunctionLength,
-  checkCyclomaticComplexity,
-  checkDeepNesting,
-  checkTooManyParams,
-  ...CUSTOM_AST_CHECKS,    // ← custom AST rules merged automatically
-];
-
 export class AstRuleEngine {
   analyze(document: vscode.TextDocument): vscode.Diagnostic[] {
+    const cfg = vscode.workspace.getConfiguration('scalearch');
+
+    // Respect enable/disable toggles — built at analysis time so setting changes take effect immediately.
+    // To add a rule, edit src/rules/customRules.ts only.
+    const perNodeChecks = [
+      ...(cfg.get('enableSolid', true) ? [checkSRP, checkDIP] : []),
+      checkFunctionLength,
+      checkCyclomaticComplexity,
+      checkDeepNesting,
+      checkTooManyParams,
+      ...CUSTOM_AST_CHECKS,
+    ];
+
     const source = document.getText();
     let ast: any;
 
@@ -46,7 +48,7 @@ export class AstRuleEngine {
 
     // Walk the entire AST once, running all per-node checks
     this.walk(ast, (node: any) => {
-      for (const check of PER_NODE_CHECKS) {
+      for (const check of perNodeChecks) {
         const result = check(node);
         if (result) results.push(result);
       }
