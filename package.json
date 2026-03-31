@@ -36,8 +36,17 @@
   "contributes": {
     "commands": [
       {
-        "command": "scalearch.dbAnalyze",
-        "title": "ScaleArch: Analyze Scalability"
+        "command": "scalearch.analyze",
+        "title": "ScaleArch: Analyze Current File",
+        "category": "ScaleArch"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "scalearch.analyze",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorTextFocus"
       }
     ],
     "configuration": {
@@ -82,6 +91,11 @@
           "type": "number",
           "default": 4,
           "description": "Max function parameters before warning"
+        },
+        "scalearch.maxNestingDepth": {
+          "type": "number",
+          "default": 4,
+          "description": "Max block nesting depth before warning"
         }
       }
     }

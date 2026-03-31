@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { RuleResult } from '../rules/types';
 
 // ─────────────────────────────────────────────
+//  CONFIG HELPER — reads from VS Code settings
+//  Falls back to default if not set
+// ─────────────────────────────────────────────
+function cfg<T>(key: string, fallback: T): T {
+  return vscode.workspace.getConfiguration('scalearch').get<T>(key, fallback);
+}
+
+// ─────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────
 function makeRange(node: any): vscode.Range {
@@ -48,7 +56,7 @@ export function checkSRP(node: any): RuleResult | null {
     (m: any) => m.type === 'MethodDefinition' && m.kind !== 'constructor'
   );
 
-  const METHOD_THRESHOLD = 10;
+  const METHOD_THRESHOLD = cfg<number>('maxMethodsPerClass', 10);
   if (methods.length <= METHOD_THRESHOLD) return null;
 
   return {
@@ -97,7 +105,7 @@ export function checkFunctionLength(node: any): RuleResult | null {
   if (!node.body || node.body.type !== 'BlockStatement') return null;
 
   const lines = countLines(node);
-  const THRESHOLD = 24;
+  const THRESHOLD = cfg<number>('maxFunctionLines', 20);
   if (lines <= THRESHOLD) return null;
 
   const name = getFunctionName(node);
@@ -133,7 +141,7 @@ export function checkCyclomaticComplexity(node: any): RuleResult | null {
     return true;
   }).length;
 
-  const THRESHOLD = 5;
+  const THRESHOLD = cfg<number>('maxCyclomaticComplexity', 5);
   if (count <= THRESHOLD) return null;
 
   const name = getFunctionName(node);
@@ -169,7 +177,7 @@ export function checkDeepNesting(node: any): RuleResult | null {
   }
 
   const depth = maxDepth(node, 0);
-  const THRESHOLD = 4;
+  const THRESHOLD = cfg<number>('maxNestingDepth', 4);
   if (depth <= THRESHOLD) return null;
 
   return {
@@ -189,7 +197,7 @@ export function checkTooManyParams(node: any): RuleResult | null {
   if (!fnTypes.includes(node.type)) return null;
 
   const params = node.params ?? [];
-  const THRESHOLD = 4;
+  const THRESHOLD = cfg<number>('maxParams', 4);
   if (params.length <= THRESHOLD) return null;
 
   const name = getFunctionName(node);
