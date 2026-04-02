@@ -145,7 +145,6 @@ export const PERF_RULES: RegexRule[] = [
       return false;
     },
   },
-  },
   {
     id: 'perf/await-in-loop',
     category: 'performance',
