@@ -4,7 +4,7 @@ All notable changes to the "scalearch" extension will be documented in this file
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [2.0.0] — Multi-language Regex Engine
+## [1.0.0] — Multi-language Regex Engine
 
 ### Added
 - **Python support** — 9 regex rules covering performance, code quality, and security
