@@ -5,8 +5,8 @@ export interface RuleResult {
   message: string;
   severity: vscode.DiagnosticSeverity;
   code: string;
-  hint?: string;        // shown in hover
-  docUrl?: string;      // link to docs
+  hint?: string;
+  docUrl?: string;
 }
 
 export interface RegexRule {
@@ -16,12 +16,18 @@ export interface RegexRule {
   message: string;
   hint: string;
   severity: vscode.DiagnosticSeverity;
+  /**
+   * Optional allowlist of VS Code languageIds this rule applies to.
+   * If omitted the rule runs on ALL supported languages.
+   * Examples: ['python'], ['java'], ['cpp','c'], ['typescript','javascript']
+   */
+  languages?: string[];
 }
 
 export interface AstRule {
   id: string;
   category: RuleCategory;
-  nodeTypes: string[];   // AST node types this rule visits
+  nodeTypes: string[];
   check: (node: any, source: string) => RuleResult | null;
 }
 

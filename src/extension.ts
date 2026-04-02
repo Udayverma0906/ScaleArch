@@ -6,10 +6,15 @@ const DEBOUNCE_MS = 600;
 
 export function activate(context: vscode.ExtensionContext) {
   const collection = vscode.languages.createDiagnosticCollection('scalearch');
-  const analyzer = new Analyzer();
+  const analyzer   = new Analyzer();
 
   const analyze = (document: vscode.TextDocument) => {
-    const supported = ['typescript', 'javascript', 'typescriptreact', 'javascriptreact', 'python'];
+    const supported = [
+      // JS / TS
+      'typescript', 'javascript', 'typescriptreact', 'javascriptreact',
+      // v0.2 — regex rules only
+      'python', 'java', 'cpp', 'c',
+    ];
     if (!supported.includes(document.languageId)) return;
     if (document.uri.scheme !== 'file') return;
 
@@ -23,7 +28,6 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(
-    // Manual command
     vscode.commands.registerCommand('scalearch.analyze', () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) return;
@@ -31,7 +35,6 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage('ScaleArch analysis complete ✅');
     }),
 
-    // Debounced live analysis as you type
     vscode.workspace.onDidChangeTextDocument((e) => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => analyze(e.document), DEBOUNCE_MS);

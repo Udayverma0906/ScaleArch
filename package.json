@@ -23,15 +23,22 @@
     "solid",
     "performance",
     "database",
-    "code quality"
-  ],
+    "code quality",
+    "python",
+    "java",
+    "cpp"
+ ],
   "activationEvents": [
     "onLanguage:typescript",
     "onLanguage:javascript",
     "onLanguage:typescriptreact",
     "onLanguage:javascriptreact",
-    "onLanguage:python"
-  ],
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onCommand:scalearch.analyze"
+ ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -65,8 +72,13 @@
         "scalearch.enableSolid": {
           "type": "boolean",
           "default": true,
-          "description": "Enable SOLID principle rules"
+          "description": "Enable SOLID principle rules (SRP, DIP)"
         },
+        "scalearch.enableCodeQuality": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable code quality rules (function length, complexity, nesting, params, duplicate strings)"
+       },
         "scalearch.enableSecurity": {
           "type": "boolean",
           "default": true,
@@ -96,6 +108,21 @@
           "type": "number",
           "default": 4,
           "description": "Max block nesting depth before warning"
+        },
+        "scalearch.enablePython": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Python-specific rules (print(), bare except, mutable defaults, eval, exec, shell=True)"
+        },
+        "scalearch.enableJava": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Java-specific rules (System.out, raw types, empty catch, SQL injection, hardcoded secrets)"
+        },
+        "scalearch.enableCpp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable C/C++ rules (raw new/delete, #define constants, using namespace std, unsafe functions)"
         }
       }
     }
