@@ -1,10 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────
 #  ScaleArch — Test File  (Python)
-#  Open a .py file in the Extension Development Host to verify all
-#  Python regex rules fire correctly.
+#  Open this file in the Extension Development Host to verify all
+#  Python rules fire correctly.
 #
 #  Each section lists the rule ID and expected severity icon:
-#    ❌ Error  ⚠️ Warning  ℹ️ Info
+#    ❌ Error  ⚠️ Warning  ℹ️ Info  💡 Hint
 # ─────────────────────────────────────────────────────────────────────
 
 import subprocess
@@ -120,6 +120,99 @@ def check_output_unsafe(cmd):
 
 
 # ═══════════════════════════════════════════════════════════════
+#  AST RULES  (Python AST engine — requires Python 3.8+)
+# ═══════════════════════════════════════════════════════════════
+
+# ⚠️ py/ast-function-too-long
+# This function exceeds the default 30-line threshold
+def function_that_is_too_long(a, b, c):
+    x1  = a + 1
+    x2  = b + 2
+    x3  = c + 3
+    x4  = x1 + x2
+    x5  = x2 + x3
+    x6  = x3 + x4
+    x7  = x4 + x5
+    x8  = x5 + x6
+    x9  = x6 + x7
+    x10 = x7 + x8
+    x11 = x8 + x9
+    x12 = x9 + x10
+    x13 = x10 + x11
+    x14 = x11 + x12
+    x15 = x12 + x13
+    x16 = x13 + x14
+    x17 = x14 + x15
+    x18 = x15 + x16
+    x19 = x16 + x17
+    x20 = x17 + x18
+    x21 = x18 + x19
+    x22 = x19 + x20
+    x23 = x20 + x21
+    x24 = x21 + x22
+    x25 = x22 + x23
+    x26 = x23 + x24
+    x27 = x24 + x25
+    x28 = x25 + x26
+    x29 = x26 + x27
+    x30 = x27 + x28
+    return x30
+
+
+# ⚠️ py/ast-class-too-many-methods
+# This class has 12 methods — exceeds the default threshold of 10
+class ClassWithTooManyMethods:
+    def method_one(self):   pass
+    def method_two(self):   pass
+    def method_three(self): pass
+    def method_four(self):  pass
+    def method_five(self):  pass
+    def method_six(self):   pass
+    def method_seven(self): pass
+    def method_eight(self): pass
+    def method_nine(self):  pass
+    def method_ten(self):   pass
+    def method_eleven(self): pass
+    def method_twelve(self): pass
+
+
+# 💡 py/ast-missing-docstring
+# These functions and class have no docstring
+def function_without_docstring(x, y):
+    return x + y
+
+class ClassWithoutDocstring:
+    def public_method(self, x):
+        return x
+
+
+# 💡 py/ast-no-type-hints
+# These functions have no parameter or return type annotations
+def function_without_type_hints(name, age, active):
+    return f"{name} is {age}"
+
+def another_no_hints(items, limit):
+    return items[:limit]
+
+
+# ⚠️ py/ast-init-too-complex
+# This __init__ assigns more than 8 instance variables
+class ClassWithComplexInit:
+    """A class whose init assigns too many instance variables."""
+
+    def __init__(self, data):
+        self.name      = data.get('name')
+        self.age       = data.get('age')
+        self.email     = data.get('email')
+        self.address   = data.get('address')
+        self.phone     = data.get('phone')
+        self.role      = data.get('role')
+        self.team      = data.get('team')
+        self.region    = data.get('region')
+        self.is_active = data.get('is_active', True)
+
+
+# ═══════════════════════════════════════════════════════════════
 #  CLEAN — should NOT trigger any rules
 # ═══════════════════════════════════════════════════════════════
 
@@ -155,6 +248,22 @@ def validate_user_id(user_id):
         raise ValueError(f"user_id must be positive, got {user_id}")
     return True
 
+# ✅ Clean AST — typed, docstring, short, small class, simple init
+def clean_function(name: str, age: int) -> str:
+    """Returns a formatted greeting string."""
+    return f"Hello {name}, age {age}"
+
+class CleanClass:
+    """A small focused class that does one thing."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def greet(self) -> str:
+        """Returns a greeting."""
+        return f"Hello {self.name}"
+
 # ✅ No bare except — commented out lines should not trigger
-# except:  ← this line is commented, should be ignored
-# eval("test")  ← this too
+# except:              ← commented, should be ignored
+# eval("test")         ← commented, should be ignored
+# exec("test")         ← commented, should be ignored

@@ -10,37 +10,43 @@ import {
 } from '../rules/astRules';
 import { CUSTOM_AST_CHECKS, customWholeAstChecks } from '../rules/customRules';
 import { RuleResult } from '../rules/types';
+import { IAstEngine } from './astGateway';
 
-export class AstRuleEngine {
+function cfg<T>(key: string, fallback: T): T {
+  return vscode.workspace.getConfiguration('scalearch').get<T>(key, fallback);
+}
+
+// Core per-node checks. To add a rule, edit src/rules/customRules.ts only.
+const PER_NODE_CHECKS = [
+  checkSRP,
+  checkDIP,
+  checkFunctionLength,
+  checkCyclomaticComplexity,
+  checkDeepNesting,
+  checkTooManyParams,
+  ...CUSTOM_AST_CHECKS,
+];
+
+export class JsTsAstEngine implements IAstEngine {
   analyze(document: vscode.TextDocument): vscode.Diagnostic[] {
-    const cfg = vscode.workspace.getConfiguration('scalearch');
-
-    // Respect enable/disable toggles — built at analysis time so setting changes take effect immediately.
-    // To add a rule, edit src/rules/customRules.ts only.
-    const perNodeChecks = [
-      ...(cfg.get('enableSolid', true) ? [checkSRP, checkDIP] : []),
-      checkFunctionLength,
-      checkCyclomaticComplexity,
-      checkDeepNesting,
-      checkTooManyParams,
-      ...CUSTOM_AST_CHECKS,
-    ];
+    // Skip entirely if SOLID and code-quality are both disabled
+    const solidEnabled   = cfg<boolean>('enableSolid', true);
+    const qualityEnabled = cfg<boolean>('enableCodeQuality', true);
+    if (!solidEnabled && !qualityEnabled) return [];
 
     const source = document.getText();
     let ast: any;
 
     try {
-      // Dynamically require so the extension still loads if the parser isn't installed
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const parser = require('@typescript-eslint/typescript-estree');
       ast = parser.parse(source, {
         loc: true,
         range: true,
         jsx: document.languageId.includes('react'),
-        tolerant: true,   // don't throw on syntax errors
+        tolerant: true,
       });
     } catch {
-      // If parsing fails (e.g. syntax error in user's file) skip silently
       return [];
     }
 
@@ -48,17 +54,30 @@ export class AstRuleEngine {
 
     // Walk the entire AST once, running all per-node checks
     this.walk(ast, (node: any) => {
-      for (const check of perNodeChecks) {
+      for (const check of PER_NODE_CHECKS) {
         const result = check(node);
-        if (result) results.push(result);
+        if (result) {
+          if (this.isResultEnabled(result.code)) {
+            results.push(result);
+          }
+        }
       }
     });
 
-    // Whole-AST checks (need the full tree)
-    results.push(...checkDuplicateStrings(ast));
-    results.push(...customWholeAstChecks(ast));  // ← custom whole-AST rules
+    // Whole-AST checks
+    if (qualityEnabled) {
+      results.push(...checkDuplicateStrings(ast));
+      results.push(...customWholeAstChecks(ast));
+    }
 
     return results.map((r) => this.toDiagnostic(r));
+  }
+
+  private isResultEnabled(code: string): boolean {
+    if (code.startsWith('solid/'))   return cfg<boolean>('enableSolid', true);
+    if (code.startsWith('quality/')) return cfg<boolean>('enableCodeQuality', true);
+    if (code.startsWith('custom/'))  return true;
+    return true;
   }
 
   private walk(node: any, visit: (n: any) => void) {

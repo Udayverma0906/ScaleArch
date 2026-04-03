@@ -37,3 +37,18 @@ export type RuleCategory =
   | 'solid'
   | 'code-quality'
   | 'security';
+// ─────────────────────────────────────────────────────
+//  PythonNode
+//  Shape of nodes returned by the Python ast module
+//  via the to_dict() converter in PythonAstEngine.
+//  Exported here to avoid circular imports between
+//  pythonAstEngine ↔ pythonAstRules.
+// ─────────────────────────────────────────────────────
+export interface PythonNode {
+  _type:           string;
+  lineno?:         number;
+  col_offset?:     number;
+  end_lineno?:     number;
+  end_col_offset?: number;
+  [key: string]:   any;
+}

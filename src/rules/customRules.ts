@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { RegexRule, RuleResult } from './types';
+import { PythonRuleCheck } from './pythonAstRules';
 
 // ═══════════════════════════════════════════════════════════════════
 //
@@ -7,10 +8,11 @@ import { RegexRule, RuleResult } from './types';
 //
 //   This is YOUR file. Add rules here without touching any core files.
 //
-//   Two sections:
-//     1. CUSTOM_REGEX_RULES  — line-by-line pattern matching
-//     2. CUSTOM_AST_CHECKS   — structure-aware checks (functions, classes)
-//     3. customWholeAstChecks() — whole-file analysis
+//   Four sections:
+//     1. CUSTOM_REGEX_RULES       — line-by-line pattern matching (all languages)
+//     2. CUSTOM_AST_CHECKS        — JS/TS structure-aware checks
+//     3. customWholeAstChecks()   — JS/TS whole-file analysis
+//     4. CUSTOM_PYTHON_AST_RULES  — Python structure-aware checks
 //
 //   The engines pick these up automatically. No other file to edit.
 //
@@ -130,8 +132,6 @@ function checkBooleanParam(node: any): RuleResult | null {
   };
 }
 
-
-
 // ── Add your per-node check functions above this line ──────────────
 // then export them in the array below
 
@@ -174,7 +174,7 @@ function getAllNodes(node: any, types: string[]): any[] {
 // ── Example: warn when a file has too many imports ─────────────────
 function checkTooManyImports(ast: any): RuleResult[] {
   const imports = getAllNodes(ast, ['ImportDeclaration']);
-  const THRESHOLD = 10;
+  const THRESHOLD = 15;
   if (imports.length <= THRESHOLD) return [];
 
   return [{
@@ -194,3 +194,62 @@ export function customWholeAstChecks(ast: any): RuleResult[] {
     // ...yourWholeAstRule(ast),  ← add more here
   ];
 }
+
+// ───────────────────────────────────────────────────────────────────
+//  SECTION 4 — Custom Python AST Rules
+//
+//  Each check is a function with this signature:
+//    (node, cfg, makeDiag) => vscode.Diagnostic | null
+//
+//  node     — current Python AST node (_type, lineno, col_offset etc.)
+//  cfg      — VS Code workspace config (read thresholds from here)
+//  makeDiag — helper to create a Diagnostic at the node's location
+//
+//  Return null  → node is fine, skip
+//  Return Diag  → flag this node with a squiggly line
+//
+//  Useful Python node types (_type field):
+//    FunctionDef / AsyncFunctionDef  — function definitions
+//    ClassDef                        — class definitions
+//    Assign                          — x = value
+//    Return                          — return statement
+//    Import / ImportFrom             — import statements
+//    ExceptHandler                   — except block in try/except
+//    Call                            — any function call
+//
+//  Tip: run  python3 -c "import ast; print(ast.dump(ast.parse('your code')))"
+//       to see exact node shapes for your Python code.
+// ───────────────────────────────────────────────────────────────────
+
+// ── Example: flag functions that use bare string concatenation ─────
+// instead of f-strings or .format() (Python 3.6+ best practice)
+// Remove or replace with your own rules
+function checkPyStringConcat(
+  node: any,
+  _cfg: any,
+  makeDiag: any
+): vscode.Diagnostic | null {
+  // Look for BinOp with Add operator where either operand is a string Constant
+  if (node._type !== 'BinOp') return null;
+  if (node.op?._type !== 'Add') return null;
+
+  const leftIsStr  = node.left?._type  === 'Constant' && typeof node.left?.value  === 'string';
+  const rightIsStr = node.right?._type === 'Constant' && typeof node.right?.value === 'string';
+
+  if (!leftIsStr && !rightIsStr) return null;
+
+  return makeDiag(
+    node,
+    'String concatenation with + — prefer f-strings for readability',
+    vscode.DiagnosticSeverity.Hint,
+    'custom/py-string-concat'
+  );
+}
+
+// ── Add your Python AST check functions above this line ────────────
+// then export them in the array below
+
+export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
+  checkPyStringConcat,
+  // add your functions here ↓
+];

@@ -2,8 +2,8 @@
   "name": "scalearch",
   "displayName": "ScaleArch",
   "publisher": "UdayVerma",
-  "description": "This extension will analyze code and gives suggestions to implements better system design patterns to the code for scalability and performance of architecture. Real-time static analysis for TypeScript & JavaScript. Catches DB anti-patterns, performance issues, SOLID violations, and code quality problems — without AI, without cost, without internet. ",
-  "version": "1.0.0",
+  "description": "Real-time code quality analyzer \u2014 JS/TS/Python/Java/C++ \u2014 DB, performance, security, SOLID, complexity",
+  "version": "1.1.0",
   "license": "MIT",
   "icon": "./assets/images/extension.png",
   "repository": {
@@ -123,6 +123,31 @@
           "type": "boolean",
           "default": true,
           "description": "Enable C/C++ rules (raw new/delete, #define constants, using namespace std, unsafe functions)"
+        },
+        "scalearch.enablePythonAst": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AST-based analysis for Python files. Requires Python 3.8+ installed. Regex rules are always active regardless of this setting."
+        },
+        "scalearch.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Python 3.8+ executable. Leave empty for auto-detection (tries python3, python, py in that order)."
+        },
+        "scalearch.maxPythonFunctionLines": {
+          "type": "number",
+          "default": 30,
+          "description": "Maximum lines in a Python function before py/ast-function-too-long fires."
+        },
+        "scalearch.maxPythonClassMethods": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum methods in a Python class before py/ast-class-too-many-methods fires."
+        },
+        "scalearch.maxPythonInitAssignments": {
+          "type": "number",
+          "default": 8,
+          "description": "Maximum self.x = ... assignments in __init__ before py/ast-init-too-complex fires."
         }
       }
     }
@@ -140,7 +165,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.15",
     "@types/vscode": "^1.110.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
