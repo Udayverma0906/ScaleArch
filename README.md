@@ -1,6 +1,7 @@
 # ScaleArch — VS Code Code Quality Extension
 By Uday Verma (https://www.linkedin.com/in/uday-verma0906/)
-> Real-time static analysis for TypeScript & JavaScript.  
+
+> Real-time static analysis for TypeScript, JavaScript, Python, Java, and C++.  
 > Catches DB anti-patterns, performance issues, SOLID violations, and code quality problems — **without AI, without cost, without internet.**
 
 ---
@@ -14,10 +15,12 @@ By Uday Verma (https://www.linkedin.com/in/uday-verma0906/)
 - [How it works](#how-it-works)
 - [Adding a new rule](#adding-a-new-rule--the-only-file-you-need)
   - [Type 1 — Regex rule](#type-1--regex-rule)
-  - [Type 2 — AST rule](#type-2--ast-rule)
+  - [Type 2 — JS/TS AST rule](#type-2--jsts-ast-rule)
   - [Type 3 — Whole-AST rule](#type-3--whole-ast-rule)
+  - [Type 4 — Python AST rule](#type-4--python-ast-rule)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
+- [Using ScaleArch as a Company-Wide Coding Standard](#using-scalearch-as-a-company-wide-coding-standard)
 
 ---
 
@@ -27,8 +30,8 @@ ScaleArch runs silently in the background as you type. It underlines problematic
 
 It analyzes your code in two passes:
 
-1. **Regex engine** — instant line-by-line scan for DB patterns, security issues, and performance anti-patterns.
-2. **AST engine** — parses your code into a syntax tree to catch structural problems like SOLID violations, high complexity, and deep nesting that regex can never see.
+1. **Regex engine** — instant line-by-line scan for DB patterns, security issues, and performance anti-patterns. Runs on all supported languages.
+2. **AST engine** — parses your code into a syntax tree to catch structural problems that regex can never see. Routes to the correct engine per language via the AstGateway.
 
 No AI calls. No internet. Just fast, local, static analysis.
 
@@ -36,7 +39,7 @@ No AI calls. No internet. Just fast, local, static analysis.
 
 ## Rules reference
 
-### 🗄️ Database  *(regex engine)*
+### 🗄️ Database *(regex — all languages)*
 
 | Rule ID | Severity | What it catches |
 |---|---|---|
@@ -45,31 +48,51 @@ No AI calls. No internet. Just fast, local, static analysis.
 | `db/no-limit` | Warning | Query without `LIMIT` — unbounded result set |
 | `db/leading-wildcard-like` | Warning | `LIKE '%...'` — leading wildcard disables index |
 | `db/query-in-loop` | Error | SQL query inside a loop — N+1 problem |
+| `db/subquery-in-clause` | Warning | `IN (SELECT ...)` — subquery performance issue |
+| `db/delete-without-where` | Error | `DELETE` without `WHERE` — wipes entire table |
+| `db/update-without-where` | Error | `UPDATE` without `WHERE` — updates every row |
 
-### ⚡ Performance  *(regex engine)*
+### ⚡ Performance *(regex)*
 
-| Rule ID | Severity | What it catches |
+| Rule ID | Languages | What it catches |
 |---|---|---|
-| `perf/json-parse-in-loop` | Warning | `JSON.parse()` called inside a loop |
-| `perf/console-log-production` | Info | `console.log()` left in code |
-| `perf/sync-fs-call` | Error | `readFileSync`, `writeFileSync` etc. — blocks event loop |
-| `perf/new-object-in-loop` | Warning | Object/array allocation inside a loop — GC pressure |
+| `perf/json-parse-in-loop` | JS/TS | `JSON.parse()` called inside a loop |
+| `perf/console-log-production` | JS/TS | `console.log()` left in code |
+| `perf/sync-fs-call` | JS/TS | `readFileSync`, `writeFileSync` — blocks event loop |
+| `perf/new-object-in-loop` | JS/TS | Object/array allocation inside a loop |
+| `perf/await-in-loop` | JS/TS | `await` inside a loop — use Promise.all() |
+| `py/print-in-production` | Python | `print()` instead of logging module |
+| `py/new-object-in-loop` | Python | List/dict allocation inside a loop |
+| `java/string-concat-in-loop` | Java | String `+=` in loop — use StringBuilder |
+| `java/new-object-in-loop` | Java | Object allocation inside a loop |
+| `cpp/cout-in-production` | C/C++ | `cout` in production — use spdlog or glog |
+| `cpp/printf-in-production` | C/C++ | `printf` — use logging framework |
 
-### 🔒 Security  *(regex engine)*
+### 🔒 Security *(regex)*
 
-| Rule ID | Severity | What it catches |
+| Rule ID | Languages | What it catches |
 |---|---|---|
-| `security/hardcoded-secret` | Error | Hardcoded passwords, API keys, tokens |
-| `security/eval-usage` | Error | `eval()` — arbitrary code execution risk |
+| `security/hardcoded-secret` | All | Hardcoded passwords, API keys, tokens |
+| `security/eval-usage` | JS/TS | `eval()` — arbitrary code execution risk |
+| `security/hardcoded-ip` | All | Hardcoded IP addresses |
+| `security/console-log-sensitive` | JS/TS | Logging passwords, tokens, secrets |
+| `py/eval-usage` | Python | `eval()` security risk |
+| `py/exec-usage` | Python | `exec()` security risk |
+| `py/shell-true` | Python | `subprocess shell=True` injection risk |
+| `java/hardcoded-secret` | Java | Secrets hardcoded in string literals |
+| `java/sql-concatenation` | Java | SQL injection via string concatenation |
+| `cpp/gets-usage` | C/C++ | `gets()` — buffer overflow, removed in C11 |
+| `cpp/strcpy-usage` | C/C++ | `strcpy()` — no bounds checking |
+| `cpp/sprintf-usage` | C/C++ | `sprintf()` — no bounds checking |
 
-### 🏗️ SOLID Principles  *(AST engine)*
+### 🏗️ SOLID Principles *(JS/TS AST engine)*
 
 | Rule ID | Severity | What it catches |
 |---|---|---|
 | `solid/srp` | Warning | Class with 10+ methods — Single Responsibility violation |
 | `solid/dip` | Warning | Constructor uses `new ConcreteClass()` — Dependency Inversion violation |
 
-### 🧹 Code Quality  *(AST engine)*
+### 🧹 Code Quality *(JS/TS AST engine)*
 
 | Rule ID | Severity | What it catches |
 |---|---|---|
@@ -79,7 +102,45 @@ No AI calls. No internet. Just fast, local, static analysis.
 | `quality/too-many-params` | Warning | Function with 5+ parameters |
 | `quality/duplicate-string` | Info | Same string literal used 3+ times |
 
-### ✏️ Custom Rules  *(your additions)*
+### 🐍 Python Code Quality *(Python AST engine — requires Python 3.8+)*
+
+| Rule ID | Severity | What it catches |
+|---|---|---|
+| `py/ast-function-too-long` | Warning | Function body over 30 lines |
+| `py/ast-class-too-many-methods` | Warning | Class with more than 10 methods |
+| `py/ast-missing-docstring` | Hint | Public function or class has no docstring |
+| `py/ast-no-type-hints` | Hint | Function has no parameter or return type annotations |
+| `py/ast-init-too-complex` | Warning | `__init__` assigns more than 8 instance variables |
+
+### 🔧 Python Code Quality *(regex engine)*
+
+| Rule ID | Severity | What it catches |
+|---|---|---|
+| `py/bare-except` | Warning | Bare `except:` — catches KeyboardInterrupt and SystemExit |
+| `py/mutable-default-arg` | Error | Mutable default argument — shared across all calls |
+| `py/broad-exception-catch` | Warning | `except Exception` — too broad |
+| `py/assert-in-production` | Warning | `assert` — stripped by `python -O` flag |
+
+### ☕ Java Code Quality *(regex engine)*
+
+| Rule ID | Severity | What it catches |
+|---|---|---|
+| `java/system-out-println` | Info | Use SLF4J or Log4j2 instead |
+| `java/empty-catch` | Warning | Silently swallowed exceptions |
+| `java/catch-generic-exception` | Warning | Catching broad Exception type |
+| `java/raw-types` | Warning | `List`, `Map`, `Set` without generic type parameter |
+
+### ⚙️ C/C++ Code Quality *(regex engine)*
+
+| Rule ID | Severity | What it catches |
+|---|---|---|
+| `cpp/raw-new-without-delete` | Warning | Use smart pointers instead |
+| `cpp/raw-delete` | Warning | Use RAII via `unique_ptr` / `shared_ptr` |
+| `cpp/define-instead-of-const` | Warning | Use `constexpr` or `const` instead |
+| `cpp/using-namespace-std` | Warning | Pollutes the global namespace |
+| `cpp/c-style-cast` | Warning | Use `static_cast`, `dynamic_cast`, or `reinterpret_cast` |
+
+### ✏️ Custom Rules *(your additions)*
 
 | Rule ID | Severity | What it catches |
 |---|---|---|
@@ -92,29 +153,28 @@ No AI calls. No internet. Just fast, local, static analysis.
 
 ## Installation
 
-**Prerequisites:** Node.js 18+, VS Code 1.85+
+**Prerequisites:** Node.js 18+, VS Code 1.85+, Python 3.8+ *(for Python AST rules)*
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/ScaleArch.git
-cd scalearch
+git clone https://github.com/Udayverma0906/ScaleArch.git
+cd ScaleArch
 
 # 2. Install dependencies
 npm install
 
-# 3. Compile TypeScript
+# 3. Compile
 npm run compile
 
 # 4. Open in VS Code
 code .
 ```
 
-Then press **F5** to launch the Extension Development Host — a second VS Code window where the extension runs live. Open any `.ts` or `.js` file and the analysis starts automatically.
+Then press **F5** to launch the Extension Development Host. Open any supported file and analysis starts automatically.
 
-To run the test file that triggers every rule:
-```
-open test/test_all_rules.ts in the Extension Development Host
-```
+**Supported file types:** `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.java`, `.cpp`, `.c`
+
+To test Python AST rules — open `test/test_python_rules.py` in the Extension Development Host.
 
 ---
 
@@ -123,23 +183,30 @@ open test/test_all_rules.ts in the Extension Development Host
 ```
 scalearch/
 ├── src/
-│   ├── extension.ts          # Entry point — registers commands, sets up debounce
-│   ├── analyzer.ts           # Orchestrates both engines for a given document
+│   ├── extension.ts              # Entry point — registers commands, sets up debounce
+│   ├── analyzer.ts               # Orchestrates both engines for a given document
 │   │
 │   ├── engines/
-│   │   ├── regexEngine.ts    # Runs all regex rules line-by-line
-│   │   └── astEngine.ts      # Parses code into AST, walks nodes, runs AST rules
+│   │   ├── regexEngine.ts        # Runs all regex rules line-by-line (all languages)
+│   │   ├── astGateway.ts         # Routes to correct AST engine by language ID
+│   │   ├── jsTsAstEngine.ts      # JS/TS AST engine — @typescript-eslint/typescript-estree
+│   │   └── pythonAstEngine.ts    # Python AST engine — Python built-in ast module
 │   │
 │   └── rules/
-│       ├── types.ts          # Shared interfaces: RuleResult, RegexRule, AstRule
-│       ├── regexRules.ts     # Core regex rules (DB, perf, security) — don't edit
-│       ├── astRules.ts       # Core AST rules (SOLID, complexity) — don't edit
-│       └── customRules.ts    # ← YOUR FILE. Add all new rules here
+│       ├── types.ts              # Shared interfaces: RuleResult, RegexRule, PythonNode
+│       ├── regexRules.ts         # Core regex rules — don't edit
+│       ├── astRules.ts           # Core JS/TS AST rules — don't edit
+│       ├── pythonAstRules.ts     # Core Python AST rules — don't edit
+│       └── customRules.ts        # ← YOUR FILE. Add all new rules here
 │
 ├── test/
-│   └── test_all_rules.ts     # Sample file that triggers every single rule
+│   ├── test_ts_rules.ts          # Triggers every JS/TS rule
+│   ├── test_python_rules.py      # Triggers every Python rule (regex + AST)
+│   ├── test_java_rules.java      # Triggers every Java rule
+│   └── test_cpp_rules.cpp        # Triggers every C/C++ rule
 │
-├── package.json              # Extension manifest, VS Code config contributions
+├── package.json                  # Extension manifest, VS Code config contributions
+├── webpack.config.js             # Bundles src/ into dist/extension.js
 └── tsconfig.json
 ```
 
@@ -150,38 +217,45 @@ scalearch/
 ### The two-engine architecture
 
 ```
-Your file
+Your file (any supported language)
    │
-   ├──▶  RegexEngine
+   ├──▶  RegexEngine  (all languages)
    │        └── splits into lines
-   │        └── runs DB_RULES + PERF_RULES + SECURITY_RULES + CUSTOM_REGEX_RULES
+   │        └── runs DB + PERF + SECURITY + PYTHON/JAVA/CPP + CUSTOM_REGEX_RULES
+   │        └── filters by rule.languages field
    │        └── returns Diagnostic[]
    │
-   └──▶  AstEngine
-            └── parses entire file into AST (@typescript-eslint/typescript-estree)
-            └── walks every node in the tree
-            └── calls PER_NODE_CHECKS[] + CUSTOM_AST_CHECKS[] on every node
-            └── also runs whole-AST checks (duplicate strings, custom whole-AST rules)
-            └── returns Diagnostic[]
+   └──▶  AstGateway
+            ├── JS/TS  →  JsTsAstEngine
+            │               └── @typescript-eslint/typescript-estree
+            │               └── SOLID + quality + CUSTOM_AST_CHECKS
+            │
+            ├── Python →  PythonAstEngine
+            │               └── Python built-in ast module (child process)
+            │               └── 5 Python AST rules + CUSTOM_PYTHON_AST_RULES
+            │
+            ├── Java   →  JavaAstEngine  (v0.4 — planned)
+            └── C/C++  →  CppAstEngine   (v1.0 — planned)
 
 Both results combined → shown as squiggly lines in VS Code
 ```
 
-### How custom rules plug in
+### AstGateway — adding new languages
 
-`customRules.ts` exports three things. The engines import them and merge automatically — you never touch the engine files:
+The gateway pattern means adding Java or C++ AST is one new file and one line:
 
+```typescript
+// src/engines/astGateway.ts
+this.engines = [
+  { langs: ['typescript', 'javascript', ...], engine: new JsTsAstEngine() },
+  { langs: ['python'],                         engine: new PythonAstEngine() },
+  // { langs: ['java'], engine: new JavaAstEngine() },  ← uncomment for v0.4
+];
 ```
-customRules.ts
-   │
-   ├── CUSTOM_REGEX_RULES  ──▶  regexEngine.ts  (spread into ALL_REGEX_RULES)
-   ├── CUSTOM_AST_CHECKS   ──▶  astEngine.ts    (spread into PER_NODE_CHECKS)
-   └── customWholeAstChecks() ──▶  astEngine.ts  (called after the node walk)
-```
 
-### Debouncing for large files
+### Debouncing
 
-The extension waits until you stop typing for 600ms before running. This keeps it responsive even on large files.
+The extension waits 600ms after you stop typing before running. This keeps it responsive even on large files.
 
 ---
 
@@ -190,105 +264,57 @@ The extension waits until you stop typing for 600ms before running. This keeps i
 > **You only ever edit `src/rules/customRules.ts`.**  
 > Core files stay untouched. Your rules are picked up automatically.
 
-The file has three clearly labelled sections. Pick the one that fits your rule.
+The file has four clearly labelled sections.
 
 ---
 
 ### Type 1 — Regex rule
 
-**Use when:** the problem can be spotted on a single line with a regular expression.
-
-**Good for:** `eval()`, `SELECT *`, `console.log`, hardcoded secrets, specific API misuse.
-
-Open `src/rules/customRules.ts` and add an object to `CUSTOM_REGEX_RULES`:
+**Use when:** the problem can be spotted on a single line. Works on all languages.
 
 ```typescript
-// src/rules/customRules.ts  →  SECTION 1
+// src/rules/customRules.ts → SECTION 1
 
 export const CUSTOM_REGEX_RULES: RegexRule[] = [
-
   {
-    id: 'custom/your-rule-id',        // unique ID, format: 'category/rule-name'
+    id: 'custom/your-rule-id',
     category: 'performance',          // database | performance | solid | code-quality | security
-    severity: vscode.DiagnosticSeverity.Warning,   // Error | Warning | Information | Hint
-    message: 'Short message shown in the squiggly tooltip',
-    hint: 'Longer explanation shown on hover. Explain WHY it is a problem and HOW to fix it.',
+    severity: vscode.DiagnosticSeverity.Warning,
+    message: 'Short message in the squiggly tooltip',
+    hint: 'Longer explanation shown on hover. WHY it is wrong and HOW to fix it.',
+    languages: ['python'],            // optional — omit to run on all languages
     test: (line, allLines, lineIndex) => {
-      // Return true  → flag this line
-      // Return false → skip
       return /your-pattern/.test(line);
     },
   },
-
 ];
 ```
 
-The `test` function receives three arguments — you only need all three when looking at context around a line:
-
-```typescript
-// Simple: check only the current line
-test: (line) => /setTimeout\s*\(.*,\s*0\s*\)/.test(line),
-
-// Context-aware: look back 5 lines to detect a loop
-test: (line, allLines, lineIndex) => {
-  if (!/JSON\.parse\s*\(/.test(line)) return false;
-  for (let i = Math.max(0, lineIndex - 5); i < lineIndex; i++) {
-    if (/\b(for|while|forEach|map)\b/.test(allLines[i])) return true;
-  }
-  return false;
-},
-```
-
-**Done. No other file to edit.**
-
 ---
 
-### Type 2 — AST rule
+### Type 2 — JS/TS AST rule
 
-**Use when:** the problem requires understanding code structure — you need to know about functions, classes, parameter counts, nesting depth, method lists, etc.
-
-**Good for:** function length, class complexity, SOLID violations, constructor patterns.
-
-#### How a per-node check works
-
-The AST engine visits **every node** in your code's syntax tree. Your function is called once per node. Return `null` to skip, return a `RuleResult` to flag it.
+**Use when:** you need code structure — function length, class complexity, constructor patterns.
 
 ```typescript
-// Pseudocode of what happens internally:
-for every node in the AST:
-  checkSRP(node)           → null or result
-  checkDIP(node)           → null or result
-  checkFunctionLength(node)→ null or result
-  ...
-  checkYourRule(node)      → null or result   ← your function runs here
-```
+// src/rules/customRules.ts → SECTION 2
 
-Open `src/rules/customRules.ts` and add a function, then register it:
-
-```typescript
-// src/rules/customRules.ts  →  SECTION 2
-
-// Step A: write the function
 function checkNoMagicNumbers(node: any): RuleResult | null {
-  // 1. Filter — only look at the node type you care about
   if (node.type !== 'Literal') return null;
   if (typeof node.value !== 'number') return null;
 
-  // 2. Apply your condition
   const ALLOWED = [0, 1, -1, 2, 100];
   if (ALLOWED.includes(node.value)) return null;
 
-  // 3. Return a result
   return {
-    range: makeRange(node),           // highlights the node in the editor
+    range: makeRange(node),
     code: 'custom/magic-number',
     message: `Magic number ${node.value} — extract to a named constant`,
-    hint: `Magic numbers make code hard to understand and maintain. Extract to: const MAX_RETRIES = ${node.value}`,
+    hint: `Named constants make code self-documenting. const MAX_RETRIES = ${node.value}`,
     severity: vscode.DiagnosticSeverity.Information,
   };
 }
 
-// Step B: add it to the export array — that's all
 export const CUSTOM_AST_CHECKS: Array<(node: any) => RuleResult | null> = [
   checkEmptyCatch,
   checkBooleanParam,
@@ -296,39 +322,17 @@ export const CUSTOM_AST_CHECKS: Array<(node: any) => RuleResult | null> = [
 ];
 ```
 
-**Done. No other file to edit.**
-
-#### Common AST node types
-
-| Node type | When it appears |
-|---|---|
-| `FunctionDeclaration` | `function foo() {}` |
-| `FunctionExpression` | `const foo = function() {}` |
-| `ArrowFunctionExpression` | `const foo = () => {}` |
-| `ClassDeclaration` | `class Foo {}` |
-| `MethodDefinition` | A method inside a class body |
-| `BlockStatement` | Any `{ }` block |
-| `IfStatement` | `if (...)` |
-| `CallExpression` | Any function call: `foo()`, `bar.baz()` |
-| `NewExpression` | `new Foo()` |
-| `Literal` | String, number, boolean literal values |
-| `CatchClause` | The `catch (e) { }` block |
-| `ImportDeclaration` | `import ... from '...'` |
-
-> **Tip:** Paste any code into [astexplorer.net](https://astexplorer.net) and select `@typescript-eslint/parser` to see the exact shape of any node. This is the fastest way to write new AST rules.
+> **Tip:** Paste any code into [astexplorer.net](https://astexplorer.net) and select `@typescript-eslint/parser` to see exact node shapes.
 
 ---
 
 ### Type 3 — Whole-AST rule
 
-**Use when:** you need to look at the entire file at once — for example, counting all imports, finding all usages of a pattern, or detecting repeated identifiers across the file.
-
-Open `src/rules/customRules.ts` and add a function to `customWholeAstChecks`:
+**Use when:** you need to look at the entire file at once — counting all imports, finding repeated identifiers.
 
 ```typescript
-// src/rules/customRules.ts  →  SECTION 3
+// src/rules/customRules.ts → SECTION 3
 
-// Step A: write the function (returns RuleResult[], not null)
 function checkNoDefaultExport(ast: any): RuleResult[] {
   const exports = getAllNodes(ast, ['ExportDefaultDeclaration']);
   if (exports.length === 0) return [];
@@ -337,12 +341,11 @@ function checkNoDefaultExport(ast: any): RuleResult[] {
     range: makeRange(exports[0]),
     code: 'custom/no-default-export',
     message: 'Avoid default exports — use named exports for better refactoring support',
-    hint: 'Named exports make imports explicit and enable better IDE rename support. Replace: export default foo → export { foo }',
+    hint: 'Named exports make imports explicit. Replace: export default foo → export { foo }',
     severity: vscode.DiagnosticSeverity.Information,
   }];
 }
 
-// Step B: call it inside customWholeAstChecks
 export function customWholeAstChecks(ast: any): RuleResult[] {
   return [
     ...checkTooManyImports(ast),
@@ -351,7 +354,57 @@ export function customWholeAstChecks(ast: any): RuleResult[] {
 }
 ```
 
-**Done. No other file to edit.**
+---
+
+### Type 4 — Python AST rule
+
+**Use when:** you need Python code structure — function length, class design, docstring presence, type hints.
+
+Requires Python 3.8+ installed. The function receives one Python AST node at a time.
+
+```typescript
+// src/rules/customRules.ts → SECTION 4
+
+function checkPyNoPassInExcept(
+  node: any,
+  _cfg: any,
+  makeDiag: any
+): vscode.Diagnostic | null {
+  // Fire on ExceptHandler (Python's except block)
+  if (node._type !== 'ExceptHandler') return null;
+
+  const body = node.body ?? [];
+  const isOnlyPass = body.length === 1 && body[0]._type === 'Pass';
+  if (!isOnlyPass) return null;
+
+  return makeDiag(
+    node,
+    'Empty except block — exception is silently swallowed',
+    vscode.DiagnosticSeverity.Warning,
+    'custom/py-empty-except'
+  );
+}
+
+export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
+  checkPyStringConcat,
+  checkPyNoPassInExcept,   // ← add here
+];
+```
+
+**Common Python AST node types** (`_type` field):
+
+| Node | When it appears |
+|---|---|
+| `FunctionDef` / `AsyncFunctionDef` | Function definitions |
+| `ClassDef` | Class definitions |
+| `Assign` | `x = value` assignments |
+| `Return` | Return statements |
+| `Import` / `ImportFrom` | Import statements |
+| `ExceptHandler` | `except` blocks in try/except |
+| `Call` | Any function call |
+| `BinOp` | Binary operations (`+`, `-`, `*` etc.) |
+
+> **Tip:** Run `python3 -c "import ast; print(ast.dump(ast.parse('your code here')))"` to see exact node shapes for any Python code.
 
 ---
 
@@ -365,10 +418,19 @@ Users can tune thresholds in VS Code settings (`Ctrl+,` → search "ScaleArch"):
 | `scalearch.enablePerformance` | `true` | Enable performance rules |
 | `scalearch.enableSolid` | `true` | Enable SOLID rules |
 | `scalearch.enableSecurity` | `true` | Enable security rules |
+| `scalearch.enableCodeQuality` | `true` | Enable code quality rules |
+| `scalearch.enablePython` | `true` | Enable Python regex rules |
+| `scalearch.enableJava` | `true` | Enable Java regex rules |
+| `scalearch.enableCpp` | `true` | Enable C/C++ regex rules |
+| `scalearch.enablePythonAst` | `true` | Enable Python AST rules (requires Python 3.8+) |
+| `scalearch.pythonPath` | `""` | Custom Python executable path (auto-detected if empty) |
 | `scalearch.maxMethodsPerClass` | `10` | SRP: max methods before warning |
-| `scalearch.maxFunctionLines` | `20` | Max lines per function |
+| `scalearch.maxFunctionLines` | `20` | Max lines per JS/TS function |
 | `scalearch.maxCyclomaticComplexity` | `5` | Max cyclomatic complexity |
 | `scalearch.maxParams` | `4` | Max function parameters |
+| `scalearch.maxPythonFunctionLines` | `30` | Max lines per Python function |
+| `scalearch.maxPythonClassMethods` | `10` | Max methods per Python class |
+| `scalearch.maxPythonInitAssignments` | `8` | Max `self.x =` assignments in `__init__` |
 
 ---
 
@@ -379,39 +441,17 @@ Fork the repo, add your rules to `customRules.ts`, and open a PR.
 ### Checklist for a new rule PR
 
 - [ ] Rule added to the correct section in `customRules.ts`
-- [ ] Test case added to `test/test_all_rules.ts` that triggers the rule
-- [ ] Rule added to the custom rules table in this README
+- [ ] Test case added to the relevant test file that triggers the rule
+- [ ] Rule added to the rules reference table in this README
 - [ ] Setting added to `package.json` if the rule has a configurable threshold
-
-### Ideas for new rules
-
-**SOLID**
-- Open/Closed: class modified directly instead of extended
-- Liskov: method override that changes return type
-- Interface Segregation: interface with too many methods
-
-**Performance**
-- `await` inside a loop (use `Promise.all` instead)
-- Array `.find()` called multiple times on the same array in a function
-- Missing memoization on expensive recursive functions
-
-**Code quality**
-- Magic numbers (unexplained numeric literals)
-- TODO/FIXME comments left in code
-- Deeply chained `.then().then().then()` without `async/await`
-- Functions with boolean parameters (Single Responsibility smell)
-- Empty catch blocks (already included as an example)
-
----
-
-*Built with [@typescript-eslint/typescript-estree](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/typescript-estree) for AST parsing.*
+- [ ] CHANGELOG.md updated
 
 ---
 
 ## Using ScaleArch as a Company-Wide Coding Standard
 
 ScaleArch is designed to be **forked and customised per team or company.**  
-The idea is simple: your engineering team defines what "bad code" means for your codebase — and ScaleArch enforces it automatically in every developer's editor, from day one.
+Your engineering team defines what "bad code" means for your codebase — ScaleArch enforces it automatically in every developer's editor, from day one.
 
 ### The workflow
 
@@ -422,164 +462,77 @@ Your company forks ScaleArch
          ├── "All DB queries must go through our QueryBuilder class"
          ├── "No raw fetch() calls — use our internal HttpClient"
          └── "Every async function must have a try/catch"
-   └── Repo is shared internally (private GitHub / GitLab / Bitbucket)
-   └── Developers install the extension from source (F5 or vsce package)
+   └── Repo is shared internally
+   └── Developers install the extension (F5 or vsce package)
    └── Rules fire live in every developer's editor as they write code
 ```
 
-No CI pipeline changes. No PR review comments about the same issue repeatedly. The rule fires the moment the developer writes the problematic code.
-
----
-
-### Real-world rule examples for companies
-
-#### Enforce internal library usage
+### Real-world rule examples
 
 ```typescript
-// customRules.ts — Section 1 (Regex)
 // Prevent direct fetch() — company uses internal HttpClient wrapper
-
 {
   id: 'company/no-raw-fetch',
   category: 'code-quality',
   severity: vscode.DiagnosticSeverity.Error,
   message: 'Direct fetch() is not allowed — use HttpClient from @company/core',
-  hint: 'Our HttpClient handles auth tokens, retries, and error logging automatically. Import it: import { HttpClient } from "@company/core"',
-  test: (line) =>
-    /\bfetch\s*\(/.test(line) &&
-    !/\/\//.test(line.trimStart()),  // ignore commented lines
+  hint: 'Our HttpClient handles auth tokens, retries, and error logging. Import: import { HttpClient } from "@company/core"',
+  test: (line) => /\bfetch\s*\(/.test(line),
 },
 ```
 
-#### Ban deprecated internal APIs
-
 ```typescript
-// Prevent usage of old payment API — deprecated since v2
-
-{
-  id: 'company/no-payment-v1',
-  category: 'security',
-  severity: vscode.DiagnosticSeverity.Error,
-  message: 'PaymentServiceV1 is deprecated and non-compliant — use PaymentServiceV2',
-  hint: 'PaymentServiceV1 does not meet PCI-DSS v4 requirements. Migrate to PaymentServiceV2. See: confluence.company.com/payment-migration',
-  test: (line) => /PaymentServiceV1|paymentV1|payment_v1/i.test(line),
-},
-```
-
-#### Enforce try/catch on all async functions
-
-```typescript
-// customRules.ts — Section 2 (AST)
-// Every async function must have at least one try/catch block
-
+// Enforce try/catch on all async functions (AST rule)
 function checkAsyncMustHaveTryCatch(node: any): RuleResult | null {
   const fnTypes = ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'];
-  if (!fnTypes.includes(node.type)) return null;
-  if (!node.async) return null;  // only async functions
-
-  const body = node.body?.body ?? [];
-  const hasTryCatch = body.some((s: any) => s.type === 'TryStatement');
+  if (!fnTypes.includes(node.type) || !node.async) return null;
+  const hasTryCatch = (node.body?.body ?? []).some((s: any) => s.type === 'TryStatement');
   if (hasTryCatch) return null;
-
   return {
     range: makeRange(node),
     code: 'company/async-no-try-catch',
     message: 'Async function has no try/catch — unhandled promise rejections crash the server',
-    hint: 'Company policy requires all async functions to handle errors explicitly. Wrap the body in try/catch or use our withErrorHandling() wrapper.',
+    hint: 'Company policy requires all async functions to handle errors explicitly.',
     severity: vscode.DiagnosticSeverity.Error,
   };
 }
 ```
 
-#### Enforce query builder pattern
-
-```typescript
-// Prevent raw SQL strings — company uses QueryBuilder for all DB access
-
-{
-  id: 'company/no-raw-sql',
-  category: 'database',
-  severity: vscode.DiagnosticSeverity.Error,
-  message: 'Raw SQL strings are not allowed — use QueryBuilder from @company/db',
-  hint: 'Raw SQL bypasses our query logging, parameterisation, and audit trail. Use: import { QueryBuilder } from "@company/db"',
-  test: (line) =>
-    /`?\s*(SELECT|INSERT|UPDATE|DELETE)\s+/i.test(line) &&
-    !/QueryBuilder/.test(line),
-},
-```
-
-#### Flag console.log in specific directories (e.g. payments module)
-
-```typescript
-// Stricter logging rules for sensitive modules
-
-{
-  id: 'company/no-log-in-payments',
-  category: 'security',
-  severity: vscode.DiagnosticSeverity.Error,
-  message: 'console.log() in payments module may leak sensitive data — use AuditLogger',
-  hint: 'The payments module handles PCI data. Use AuditLogger which redacts card numbers and PII automatically. Import: import { AuditLogger } from "@company/audit"',
-  test: (line) => /console\.(log|warn|info)\s*\(/.test(line),
-  // Note: activate this rule only for payment-related files by checking
-  // the document path in the engine, or by keeping it in a separate
-  // customRules file loaded conditionally
-},
-```
-
----
-
 ### How to distribute to your team
 
-**Option A — Private repo (recommended)**
-
-1. Fork ScaleArch into your company's private GitHub/GitLab
-2. Add your rules to `customRules.ts` and commit
-3. Share the repo link with developers
-4. Developers clone and run:
-   ```bash
-   npm install && npm run compile
-   # Then F5 in VS Code, or:
-   vsce package   # produces a .vsix file
-   ```
-5. Install the `.vsix` directly in VS Code:
-   ```
-   Extensions panel → ··· menu → Install from VSIX
-   ```
-
-**Option B — Package as `.vsix` and distribute**
-
+**Option A — Share as `.vsix`**
 ```bash
-npm install -g vsce
-vsce package
-# → produces scalearch-0.1.0.vsix
+vsce package   # produces scalearch-x.x.x.vsix
 ```
+Install via: Extensions panel → `···` menu → Install from VSIX.
 
-Share the `.vsix` file via Slack, email, or your internal package registry. Developers install it once and get all company rules automatically.
+**Option B — Private repo**
+Fork, add rules, share repo link. Developers clone and press F5.
 
-**Option C — Publish to VS Code Marketplace (for public rules)**
-
+**Option C — VS Code Marketplace**
 ```bash
 vsce publish
 ```
 
-Any developer installing `ScaleArch` gets your rules. Good for open-source teams with public coding standards.
+### Tips for engineering leads
+
+- **Namespace rule IDs** — prefix with your company name: `company/no-raw-fetch`
+- **Link to internal docs in `hint`** — `hint: 'See: confluence.company.com/api-standards'`
+- **Use `Error` sparingly** — reserve for compliance/production-breaking issues
+- **Add test cases** for every rule in the relevant test file
 
 ---
 
-### Tips for engineering leads
+## Roadmap
 
-**Keep rule IDs namespaced** — prefix with your company name so they're easy to find and never clash with core rules:
-```
-company/no-raw-fetch
-company/no-payment-v1
-acme/require-jsdoc
-```
+| Version | What | Status |
+|---|---|---|
+| v0.1.0 | JS/TS regex + AST engine | ✅ Done |
+| v1.0.0 | Python, Java, C++ regex rules | ✅ Done |
+| v1.2.0 | Python AST engine + AstGateway architecture | ✅ Done |
+| v1.4.0 | Java AST engine (tree-sitter-java) | 🔲 Planned |
+| v2.0.0 | C/C++ AST engine (tree-sitter-cpp) | 🔲 Planned |
 
-**Link to internal docs in the `hint` field** — developers should be able to understand *why* the rule exists without asking anyone:
-```typescript
-hint: 'See our API guidelines: confluence.company.com/api-standards#http-clients'
-```
+---
 
-**Use `DiagnosticSeverity.Error` sparingly** — reserve errors for things that will genuinely break production or violate compliance. Use `Warning` for style/convention rules so developers aren't blocked on legitimate work.
-
-**Add test cases for every company rule** in `test/test_all_rules.ts` — this is your living documentation of what the rule catches and what it doesn't.
+*Built with [@typescript-eslint/typescript-estree](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/typescript-estree) for JS/TS AST parsing and Python's built-in `ast` module for Python analysis.*

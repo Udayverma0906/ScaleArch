@@ -50,9 +50,10 @@ export class PythonAstEngine implements IAstEngine {
       return [];
     }
 
-    // Resolve python path if not done yet this session
-    if (this.pythonPath === undefined) {
-      this.pythonPath = this.detectPython(cfg.get<string>('pythonPath', ''));
+    // Resolve python path — re-detect if user has set pythonPath setting
+    const userPath = cfg.get<string>('pythonPath', '');
+    if (this.pythonPath === undefined || (userPath && this.pythonPath === null)) {
+      this.pythonPath = this.detectPython(userPath);
       log.appendLine(`[ScaleArch] Python detected: ${this.pythonPath ?? 'NOT FOUND'}`);
     }
 
@@ -108,12 +109,18 @@ export class PythonAstEngine implements IAstEngine {
   // Uses annotate_fields=True + include_attributes=True so every
   // node carries lineno and col_offset for squiggle placement.
   private parseSource(source: string): PythonNode | null {
-    // ast.dump() returns a Python repr string, not JSON.
-    // We use a custom node_to_dict() that recursively converts
-    // the AST into a JSON-serialisable dict — same shape as our
-    // PythonNode interface. lineno/col_offset come from _attributes.
-    const script = [
-      'import ast, json, sys',
+    // Write the Python AST script to a temp file to avoid Windows
+    // command-line escaping issues when passing multiline scripts via -c.
+    const os   = require('os');
+    const fs   = require('fs');
+    const path = require('path');
+
+    const scriptContent = [
+      'import ast, json, sys, io',
+      '',
+      '# Force UTF-8 on Windows stdin',
+      'sys.stdin  = io.TextIOWrapper(sys.stdin.buffer,  encoding="utf-8")',
+      'sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")',
       '',
       'def to_dict(node):',
       '    if isinstance(node, ast.AST):',
@@ -129,37 +136,56 @@ export class PythonAstEngine implements IAstEngine {
       '    else:',
       '        return node',
       '',
-      'src = sys.stdin.read()',
       'try:',
+      '    src  = sys.stdin.read()',
       '    tree = ast.parse(src)',
-      '    print(json.dumps(to_dict(tree)))',
-      'except SyntaxError as e:',
-      '    print(json.dumps({"_type": "SyntaxError", "msg": str(e)}))',
+      '    sys.stdout.write(json.dumps(to_dict(tree)))',
+      '    sys.stdout.write(chr(10))',
+      '    sys.stdout.flush()',
+      'except Exception as e:',
+      '    sys.stdout.write(json.dumps({"_type": "SyntaxError", "msg": str(e)}))',
+      '    sys.stdout.write(chr(10))',
+      '    sys.stdout.flush()',
     ].join('\n');
+
+    const tmpScript = path.join(os.tmpdir(), 'scalearch_ast_runner.py');
+    try {
+      fs.writeFileSync(tmpScript, scriptContent, 'utf8');
+    } catch {
+      return null;
+    }
 
     let result;
     try {
       result = spawnSync(
         this.pythonPath!,
-        ['-c', script],
+        [tmpScript],
         {
           input:    source,
           encoding: 'utf8',
-          timeout:  5000,   // 5s max — generous for large files
+          timeout:  5000,
         }
       );
     } catch {
       return null;
     }
 
+    const log = PythonAstEngine.getChannel();
+    log.appendLine(`[ScaleArch] spawnSync status: ${result.status}`);
+    log.appendLine(`[ScaleArch] spawnSync stdout: ${(result.stdout ?? '').substring(0, 100)}`);
+    log.appendLine(`[ScaleArch] spawnSync stderr: ${(result.stderr ?? '').substring(0, 200)}`);
+
     if (result.status !== 0 || !result.stdout) return null;
 
     try {
       const parsed = JSON.parse(result.stdout.trim());
-      // If Python reported a SyntaxError in the user's file, skip silently
-      if (parsed._type === 'SyntaxError') return null;
+      if (parsed._type === 'SyntaxError') {
+        log.appendLine(`[ScaleArch] Python SyntaxError: ${parsed.msg}`);
+        return null;
+      }
       return parsed as PythonNode;
-    } catch {
+    } catch (e) {
+      log.appendLine(`[ScaleArch] JSON.parse failed: ${e}`);
       return null;
     }
   }
@@ -235,16 +261,19 @@ export class PythonAstEngine implements IAstEngine {
   }
 
   // Run python --version and check it's 3.8+
+  // Uses spawnSync so we can read BOTH stdout and stderr —
+  // Python 2.x prints version to stderr, some Windows installs do too.
   private isValidPython(exe: string): boolean {
     try {
-      const output = execSync(`"${exe}" --version`, {
-        timeout: 3000,
+      const result = spawnSync(exe, ['--version'], {
+        timeout:  3000,
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
       });
-      // Output is e.g. "Python 3.11.2" — on some systems on stderr
-      const version = output.trim();
-      return this.isSupportedVersion(version);
+      // Combine stdout + stderr — version string appears in either depending on OS/version
+      const combined = ((result.stdout ?? '') + (result.stderr ?? '')).trim();
+      const log = PythonAstEngine.getChannel();
+      log.appendLine(`[ScaleArch] isValidPython("${exe}") → "${combined}"`);
+      return this.isSupportedVersion(combined);
     } catch {
       return false;
     }

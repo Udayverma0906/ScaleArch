@@ -4,6 +4,44 @@ All notable changes to the "scalearch" extension will be documented in this file
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.2.0] — Python AST Engine
+
+### Added
+- **Python AST engine** — structure-aware analysis for Python files using Python's built-in `ast` module
+  - Zero bundle cost — no native bindings, no extra dependencies
+  - Requires Python 3.8+ installed on the machine (auto-detected)
+  - Falls back gracefully — regex rules still fire if Python is not found
+
+- **5 Python AST rules**
+  - `py/ast-function-too-long` — function body exceeds `maxPythonFunctionLines` (default 30)
+  - `py/ast-class-too-many-methods` — class has more than `maxPythonClassMethods` methods (default 10)
+  - `py/ast-missing-docstring` — public function or class has no docstring
+  - `py/ast-no-type-hints` — function has no parameter or return type annotations
+  - `py/ast-init-too-complex` — `__init__` assigns more than `maxPythonInitAssignments` instance variables (default 8)
+
+- **AstGateway architecture** — single entry point for all AST analysis, routes by language ID
+  - `IAstEngine` interface — every language engine implements this contract
+  - `JsTsAstEngine` — existing JS/TS engine, now implements IAstEngine
+  - `PythonAstEngine` — new Python engine
+  - Adding Java or C++ AST is now one new file + one line in the gateway
+
+- **Custom Python AST rules** — Section 4 added to `customRules.ts`
+  - `CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[]` — add Python AST rules without touching core files
+  - Same user experience as `CUSTOM_REGEX_RULES` and `CUSTOM_AST_CHECKS`
+
+- **New VS Code settings**
+  - `scalearch.enablePythonAst` — toggle Python AST analysis on/off (default true)
+  - `scalearch.pythonPath` — set custom Python executable path (default: auto-detect)
+  - `scalearch.maxPythonFunctionLines` — threshold for function-too-long (default 30)
+  - `scalearch.maxPythonClassMethods` — threshold for class-too-many-methods (default 10)
+  - `scalearch.maxPythonInitAssignments` — threshold for init-too-complex (default 8)
+
+### Fixed
+- `child_process` added to webpack externals — `spawnSync` now works correctly in the bundled extension
+- Python stdin forced to UTF-8 on Windows — prevents `UnicodeDecodeError` on files with non-ASCII characters in comments
+
+---
+
 ## [1.0.0] — Multi-language Regex Engine
 
 ### Added
