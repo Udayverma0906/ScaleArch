@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 import * as vscode from 'vscode';
 import { RegexRule, RuleResult } from './types';
 import { PythonRuleCheck } from './pythonAstRules';
@@ -46,6 +47,7 @@ export const CUSTOM_REGEX_RULES: RegexRule[] = [
     hint: 'setTimeout with 0ms delay is not guaranteed to run immediately and carries scheduling overhead. Use queueMicrotask() for microtask-level scheduling or setImmediate() for I/O-bound deferral.',
     test: (line) => /setTimeout\s*\(.*,\s*0\s*\)/.test(line),
   },
+  
 
   // ── Add your regex rules below this line ───────────────────────
   //

@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 import * as vscode from 'vscode';
 import { execSync, spawnSync } from 'child_process';
 import { IAstEngine } from './astGateway';

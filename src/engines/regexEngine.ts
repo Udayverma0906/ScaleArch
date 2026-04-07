@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 import * as vscode from 'vscode';
 import { DB_RULES, PERF_RULES, SECURITY_RULES, PYTHON_RULES, JAVA_RULES, CPP_RULES } from '../rules/regexRules';
 import { CUSTOM_REGEX_RULES } from '../rules/customRules';

@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 import * as vscode from 'vscode';
 import {
   checkSRP,
@@ -38,7 +39,6 @@ export class JsTsAstEngine implements IAstEngine {
     let ast: any;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const parser = require('@typescript-eslint/typescript-estree');
       ast = parser.parse(source, {
         loc: true,

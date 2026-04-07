@@ -36,8 +36,7 @@
     "onLanguage:python",
     "onLanguage:java",
     "onLanguage:cpp",
-    "onLanguage:c",
-    "onCommand:scalearch.analyze"
+    "onLanguage:c"
   ],
   "main": "./dist/extension.js",
   "contributes": {
