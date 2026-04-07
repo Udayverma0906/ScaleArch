@@ -3,7 +3,7 @@
 All notable changes to the "scalearch" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-## [1.2.1] — Python AST Engine
+## [1.2.2] — Python AST Engine
 
 ### Fixed
   Hints were not showing up for all rules.
