@@ -20,7 +20,8 @@ export type PythonRuleCheck = (
   cfg:      vscode.WorkspaceConfiguration,
   makeDiag: (node: PythonNode, message: string,
              severity: vscode.DiagnosticSeverity,
-             code: string) => vscode.Diagnostic
+             code: string,
+             hint?: string) => vscode.Diagnostic
 ) => vscode.Diagnostic | null;
 
 // ─────────────────────────────────────────────────────
@@ -48,7 +49,8 @@ export const checkPyFunctionTooLong: PythonRuleCheck = (node, cfg, makeDiag) => 
     node,
     `Function "${node.name}" is ${length} lines — keep functions under ${maxLines} lines`,
     vscode.DiagnosticSeverity.Warning,
-    'py/ast-function-too-long'
+    'py/ast-function-too-long',
+    `Functions over ${maxLines} lines are hard to test. Extract smaller helpers with single responsibilities.`
   );
 };
 
@@ -76,7 +78,8 @@ export const checkPyClassTooManyMethods: PythonRuleCheck = (node, cfg, makeDiag)
     node,
     `Class "${node.name}" has ${methods.length} methods — consider splitting (max ${maxMethods})`,
     vscode.DiagnosticSeverity.Warning,
-    'py/ast-class-too-many-methods'
+    'py/ast-class-too-many-methods',
+    `A class with many methods likely violates Single Responsibility. Split into smaller, focused classes.`
   );
 };
 
@@ -119,7 +122,8 @@ export const checkPyMissingDocstring: PythonRuleCheck = (node, _cfg, makeDiag) =
     node,
     `${kind} "${name}" has no docstring — add one to explain its purpose`,
     vscode.DiagnosticSeverity.Hint,
-    'py/ast-missing-docstring'
+    'py/ast-missing-docstring',
+    `Add a docstring as the first statement: """Short description."""`
   );
 };
 
@@ -174,7 +178,8 @@ export const checkPyNoTypeHints: PythonRuleCheck = (node, _cfg, makeDiag) => {
     node,
     `Function "${name}" has no type hints — add parameter and return annotations`,
     vscode.DiagnosticSeverity.Hint,
-    'py/ast-no-type-hints'
+    'py/ast-no-type-hints',
+    `Add type annotations: def func(param: str) -> None. Enables IDE support and catches type errors early.`
   );
 };
 
@@ -215,7 +220,8 @@ export const checkPyInitTooComplex: PythonRuleCheck = (node, cfg, makeDiag) => {
     node,
     `__init__ assigns ${selfAssignments.length} instance variables — consider splitting this class (max ${maxAssignments})`,
     vscode.DiagnosticSeverity.Warning,
-    'py/ast-init-too-complex'
+    'py/ast-init-too-complex',
+    `Too many instance variables suggests the class is doing too much. Consider @dataclass or splitting into smaller classes.`
   );
 };
 

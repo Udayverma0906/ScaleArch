@@ -225,14 +225,19 @@ export class PythonAstEngine implements IAstEngine {
     node:     PythonNode,
     message:  string,
     severity: vscode.DiagnosticSeverity,
-    code:     string
+    code:     string,
+    hint?:    string   // optional — shown as tooltip detail on hover
   ): vscode.Diagnostic {
     const line   = (node.lineno   ?? 1) - 1;   // 1-based → 0-based
     const col    =  node.col_offset ?? 0;
     const endCol =  node.end_col_offset ?? col + 1;
 
     const range = new vscode.Range(line, col, line, endCol);
-    const diag  = new vscode.Diagnostic(range, `[ScaleArch] ${message}`, severity);
+    // Append hint to message if provided — VS Code shows it on hover after the main message
+    const fullMessage = hint
+      ? `[ScaleArch] ${message}\n\n💡 ${hint}`
+      : `[ScaleArch] ${message}`;
+    const diag  = new vscode.Diagnostic(range, fullMessage, severity);
     diag.code   = code;
     diag.source = 'ScaleArch';
     return diag;

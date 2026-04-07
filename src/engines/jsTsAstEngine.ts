@@ -95,7 +95,10 @@ export class JsTsAstEngine implements IAstEngine {
   }
 
   private toDiagnostic(r: RuleResult): vscode.Diagnostic {
-    const diag = new vscode.Diagnostic(r.range, `[ScaleArch] ${r.message}`, r.severity);
+    const fullMessage = r.hint
+      ? `[ScaleArch] ${r.message}\n\n💡 ${r.hint}`
+      : `[ScaleArch] ${r.message}`;
+    const diag = new vscode.Diagnostic(r.range, fullMessage, r.severity);
     diag.code = r.code;
     diag.source = 'ScaleArch';
     return diag;

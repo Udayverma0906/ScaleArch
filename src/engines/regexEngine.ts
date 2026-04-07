@@ -44,10 +44,13 @@ export class RegexRuleEngine {
         if (rule.languages && !rule.languages.includes(lang)) continue;
 
         if (rule.test(line, lines, index)) {
-          const range = new vscode.Range(index, 0, index, line.length);
-          const diag  = new vscode.Diagnostic(range, `[ScaleArch] ${rule.message}`, rule.severity);
-          diag.code   = rule.id;
-          diag.source = 'ScaleArch';
+          const range       = new vscode.Range(index, 0, index, line.length);
+          const fullMessage = rule.hint
+            ? `[ScaleArch] ${rule.message}\n\n💡 ${rule.hint}`
+            : `[ScaleArch] ${rule.message}`;
+          const diag        = new vscode.Diagnostic(range, fullMessage, rule.severity);
+          diag.code         = rule.id;
+          diag.source       = 'ScaleArch';
           diagnostics.push(diag);
         }
       }
