@@ -30,6 +30,8 @@ import * as child_process from 'child_process';
 class OrderRepository {}
 class FileLogger {}
 
+//Please select new rules to test by adding code snippets below that violate the rules defined in the extension. Each snippet should be labeled with the corresponding rule ID and expected severity icon.
+
 
 // ═══════════════════════════════════════════════════════════════
 //  DATABASE RULES  (regex engine — all languages)

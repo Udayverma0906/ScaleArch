@@ -11,7 +11,9 @@ export const DB_RULES: RegexRule[] = [
     severity: vscode.DiagnosticSeverity.Error,
     message: 'Avoid SELECT * — fetch only the columns you need',
     hint: 'SELECT * fetches all columns including unused ones, wastes network bandwidth and prevents index-only scans.',
-    test: (line) => /select\s+\*/i.test(line),
+    test: (line) =>
+      /select\s+\*/i.test(line) &&
+      !/^\s*(\/\/|#|\*)/.test(line),
   },
   {
     id: 'db/no-where-clause',
@@ -191,9 +193,12 @@ export const SECURITY_RULES: RegexRule[] = [
     severity: vscode.DiagnosticSeverity.Warning,
     message: 'Hardcoded IP address detected',
     hint: 'Hardcoded IPs make deployments fragile and may expose internal infrastructure. Use environment variables or service discovery.',
-    test: (line) =>
-      /\b(?:\d{1,3}\.){3}\d{1,3}\b/.test(line) &&
-      !/^\/\//.test(line.trimStart()),
+    test: (line) => {
+      if (/^\s*(\/\/|#|\*)/.test(line)) return false;
+      if (/\bv?\d+\.\d+\.\d+\.\d+\b|(version|ver)\s*[:\s][\d.]/i.test(line)) return false;
+      if (/255\.255\.255\.255|0\.0\.0\.0/.test(line)) return false;
+      return /\b(?:\d{1,3}\.){3}\d{1,3}\b/.test(line);
+    },
   },
   {
     id: 'security/console-log-sensitive',
@@ -513,8 +518,8 @@ export const CPP_RULES: RegexRule[] = [
     message: 'C-style cast — use static_cast, dynamic_cast, or reinterpret_cast',
     hint: 'C-style casts are unchecked and can silently do the wrong thing. C++ named casts make intent explicit and are verified at compile time.',
     test: (line) =>
-      /\(\s*(int|float|double|char|long|short|void\s*\*)\s*\)\s*\w+/.test(line) &&
-      !/^\s*\/\//.test(line),
+      /\(\s*(int|float|double|char|long|short|void\s*\*)\s*\)\s*[\w(]/.test(line) &&
+      !/^\s*(\/\/|\*)/.test(line.trimStart()),
   },
 
   // ── Security ──
