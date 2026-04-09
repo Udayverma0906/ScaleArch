@@ -3,7 +3,12 @@
 All notable changes to the "scalearch" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-## [1.2.2] — Python AST Engine
+## [1.2.2] — Fixed Standard Regex Rules
+
+### Fixed
+  db/select rules were getting triggered for plain english. IT will now only trigger for SQL queries.
+
+## [1.2.2] — Hints fixed
 
 ### Fixed
   Hints were not showing up for all rules.
