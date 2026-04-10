@@ -12,8 +12,10 @@ export function activate(context: vscode.ExtensionContext) {
     const supported = [
       // JS / TS
       'typescript', 'javascript', 'typescriptreact', 'javascriptreact',
-      // v0.2 — regex rules only
-      'python', 'java', 'cpp', 'c',
+      // v0.2 — regex rules and ast checks for Python
+      'python',
+      // regex rules only
+      'java', 'cpp', 'c',
     ];
     if (!supported.includes(document.languageId)) return;
     if (document.uri.scheme !== 'file') return;
