@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 import { RegexRule } from './types';
 import * as vscode from 'vscode';
 

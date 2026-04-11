@@ -1,3 +1,4 @@
+/* eslint-disable curly */
 // ─────────────────────────────────────────────────────────────────────
 //  ScaleArch — Test File  (TypeScript / JavaScript)
 //  Open this in the Extension Development Host (F5) to verify all
@@ -23,7 +24,7 @@ import * as url     from 'url';
 import * as dns     from 'dns';
 import * as net     from 'net';
 import * as zlib    from 'zlib';
-import * as child_process from 'child_process';
+import * as childProcess from 'child_process';
 // ^ 15 imports → ℹ️ custom/too-many-imports
 
 // ── Stub classes for DIP test ──
