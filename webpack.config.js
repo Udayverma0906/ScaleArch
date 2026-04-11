@@ -26,6 +26,12 @@ const extensionConfig = {
     'path':          'commonjs path',
     'os':            'commonjs os',
     'crypto':        'commonjs crypto',
+    // These packages use dynamic require() internally which causes webpack
+    // "Critical dependency" warnings. Marking them external tells webpack
+    // not to bundle them — they resolve correctly at runtime in the Extension Host.
+    'typescript':                          'commonjs typescript',
+    '@typescript-eslint/typescript-estree':'commonjs @typescript-eslint/typescript-estree',
+    '@typescript-eslint/project-service':  'commonjs @typescript-eslint/project-service',
   },
   resolve: {
     extensions: ['.ts', '.js']
