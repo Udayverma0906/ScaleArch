@@ -33,6 +33,9 @@ class FileLogger {}
 //Please select new rules to test by adding code snippets below that violate the rules defined in the extension. Each snippet should be labeled with the corresponding rule ID and expected severity icon.
 
 
+var text = 'Please select';
+var text2 = "Please select";
+
 // ═══════════════════════════════════════════════════════════════
 //  DATABASE RULES  (regex engine — all languages)
 // ═══════════════════════════════════════════════════════════════

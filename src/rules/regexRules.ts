@@ -32,11 +32,15 @@ export const DB_RULES: RegexRule[] = [
     severity: vscode.DiagnosticSeverity.Warning,
     message: 'No LIMIT clause — risk of fetching a huge result set',
     hint: 'Always paginate results. Add LIMIT (and OFFSET) to control how many rows are returned.',
-    test: (line) =>
-      /\bselect\b/i.test(line) &&
-      !/\blimit\b/i.test(line) &&
-      !/count\s*\(/i.test(line) &&
-      !/insert|update|delete/i.test(line),
+    test: (line) => {
+      // Must look like SQL SELECT — in a string literal or followed by column/wildcard syntax
+      const isSqlSelect = /(['`"])\s*SELECT\b/i.test(line) ||
+                          /\bSELECT\s+(\*|\w+\s*,|\w+\s+FROM\b)/i.test(line);
+      if (!isSqlSelect) return false;
+      return !/\bLIMIT\b/i.test(line) &&
+             !/count\s*\(/i.test(line) &&
+             !/insert|update|delete/i.test(line);
+    },
   },
   {
     id: 'db/leading-wildcard-like',
@@ -53,11 +57,14 @@ export const DB_RULES: RegexRule[] = [
     message: 'SQL query inside a loop — classic N+1 problem',
     hint: 'Each iteration fires a separate DB round-trip. Use a JOIN, batch query (WHERE id IN (...)), or a dataloader instead.',
     test: (line, allLines, idx) => {
-      if (!/\bselect\b/i.test(line)) return false;
-      for (let i = Math.max(0, idx - 5); i < idx; i++) {
-        if (/\b(for|while|forEach|map|reduce|filter|flatMap)\b/.test(allLines[i])) return true;
-      }
-      return false;
+  // Must look like SQL SELECT, not plain English
+  const isSqlSelect = /(['"`])\s*SELECT\b/i.test(line) ||
+                      /\bSELECT\s+(\*|\w+\s*,|\w+\s+FROM\b)/i.test(line);
+  if (!isSqlSelect) return false;
+  for (let i = Math.max(0, idx - 5); i < idx; i++) {
+    if (/\b(for|while|forEach|map|reduce|filter|flatMap)\b/.test(allLines[i])) return true;
+  }
+  return false;
     },
   },
   {
