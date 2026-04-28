@@ -2,7 +2,7 @@
   "name": "scalearch",
   "displayName": "ScaleArch",
   "publisher": "UdayVerma",
-  "description": "Real-time code quality analyzer — JS/TS/Python/Java/C++ — DB, performance, security, SOLID, complexity",
+  "description": "Real-time code quality analyzer \u2014 JS/TS/Python/Java/C++ \u2014 DB, performance, security, SOLID, complexity",
   "version": "1.2.4",
   "license": "MIT",
   "icon": "./assets/images/extension.png",
@@ -76,7 +76,7 @@
         "scalearch.enableCodeQuality": {
           "type": "boolean",
           "default": true,
-          "description": "Enable code quality rules (function length, complexity, nesting, params, duplicate strings)"
+          "description": "Enable code quality rules"
         },
         "scalearch.enableSecurity": {
           "type": "boolean",
@@ -105,33 +105,33 @@
         },
         "scalearch.maxNestingDepth": {
           "type": "number",
-          "default": 4,
-          "description": "Max block nesting depth before warning"
+          "default": 3,
+          "description": "Maximum nesting depth (if/for/while/try) before java/ast-deep-nesting fires."
         },
         "scalearch.enablePython": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Python-specific rules (print(), bare except, mutable defaults, eval, exec, shell=True)"
+          "description": "Enable Python-specific rules"
         },
         "scalearch.enableJava": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Java-specific rules (System.out, raw types, empty catch, SQL injection, hardcoded secrets)"
+          "description": "Enable Java-specific rules"
         },
         "scalearch.enableCpp": {
           "type": "boolean",
           "default": true,
-          "description": "Enable C/C++ rules (raw new/delete, #define constants, using namespace std, unsafe functions)"
+          "description": "Enable C/C++ rules"
         },
         "scalearch.enablePythonAst": {
           "type": "boolean",
           "default": true,
-          "description": "Enable AST-based analysis for Python files. Requires Python 3.8+ installed. Regex rules are always active regardless of this setting."
+          "description": "Enable AST-based analysis for Python files. Requires Python 3.8+."
         },
         "scalearch.pythonPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Python 3.8+ executable. Leave empty for auto-detection (tries python3, python, py in that order)."
+          "description": "Path to the Python 3.8+ executable."
         },
         "scalearch.maxPythonFunctionLines": {
           "type": "number",
@@ -147,6 +147,31 @@
           "type": "number",
           "default": 8,
           "description": "Maximum self.x = ... assignments in __init__ before py/ast-init-too-complex fires."
+        },
+        "scalearch.enableJavaAst": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AST-based analysis for Java files via tree-sitter. Regex rules are always active regardless of this setting."
+        },
+        "scalearch.maxJavaMethodLines": {
+          "type": "number",
+          "default": 40,
+          "description": "Maximum lines in a Java method before java/ast-method-too-long fires."
+        },
+        "scalearch.maxJavaClassMethods": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum methods in a Java class before java/ast-class-too-many-methods fires."
+        },
+        "scalearch.maxJavaParams": {
+          "type": "number",
+          "default": 4,
+          "description": "Maximum parameters in a Java method before java/ast-too-many-params fires."
+        },
+        "scalearch.maxJavaClassFields": {
+          "type": "number",
+          "default": 8,
+          "description": "Maximum fields in a Java class before java/ast-too-many-fields fires."
         }
       }
     }
@@ -177,6 +202,8 @@
   },
   "dependencies": {
     "@typescript-eslint/parser": "^8.57.2",
-    "@typescript-eslint/typescript-estree": "^8.57.2"
+    "@typescript-eslint/typescript-estree": "^8.57.2",
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-java": "^0.21.0"
   }
 }
