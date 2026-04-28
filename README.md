@@ -1,5 +1,5 @@
 # ScaleArch — VS Code Code Quality Extension
-By Uday Verma (https://www.linkedin.com/in/uday-verma0906/)
+By [Uday Verma](https://www.linkedin.com/in/uday-verma0906/)
 
 > Real-time static analysis for TypeScript, JavaScript, Python, Java, and C++.  
 > Catches DB anti-patterns, performance issues, SOLID violations, and code quality problems — **without AI, without cost, without internet.**
@@ -18,6 +18,7 @@ By Uday Verma (https://www.linkedin.com/in/uday-verma0906/)
   - [Type 2 — JS/TS AST rule](#type-2--jsts-ast-rule)
   - [Type 3 — Whole-AST rule](#type-3--whole-ast-rule)
   - [Type 4 — Python AST rule](#type-4--python-ast-rule)
+  - [Type 5 — Java AST rule](#type-5--java-ast-rule)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [Using ScaleArch as a Company-Wide Coding Standard](#using-scalearch-as-a-company-wide-coding-standard)
@@ -130,6 +131,24 @@ No AI calls. No internet. Just fast, local, static analysis.
 | `java/catch-generic-exception` | Warning | Catching broad Exception type |
 | `java/raw-types` | Warning | `List`, `Map`, `Set` without generic type parameter |
 
+### ☕ Java AST Rules *(tree-sitter-java engine — v2.0.0+)*
+
+| Rule ID | Severity | What it catches |
+|---|---|---|
+| `java/ast-method-too-long` | Warning | Method body over 40 lines |
+| `java/ast-class-too-many-methods` | Warning | Class with more than 10 methods (SRP) |
+| `java/ast-too-many-params` | Warning | Method with more than 4 parameters |
+| `java/ast-constructor-too-many-params` | Warning | Constructor with more than 4 parameters — use Builder |
+| `java/ast-empty-catch` | Error | Empty catch block — exception silently swallowed |
+| `java/ast-deep-nesting` | Warning | Nesting depth over 3 levels |
+| `java/ast-too-many-fields` | Warning | Class with more than 8 fields — God Object |
+| `java/ast-magic-number` | Info | Numeric literal not assigned to a named constant |
+| `java/ast-interface-too-large` | Warning | Interface with more than 5 methods — ISP violation |
+| `java/ast-public-field` | Warning | Public non-final field — breaks encapsulation |
+| `java/ast-system-exit` | Error | `System.exit()` outside main() — kills entire JVM |
+| `java/ast-thread-sleep` | Warning | `Thread.sleep()` — use ScheduledExecutorService |
+| `java/ast-string-equals-compare` | Error | String compared with `==` or `!=` — use `.equals()` |
+
 ### ⚙️ C/C++ Code Quality *(regex engine)*
 
 | Rule ID | Severity | What it catches |
@@ -174,7 +193,8 @@ Then press **F5** to launch the Extension Development Host. Open any supported f
 
 **Supported file types:** `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.java`, `.cpp`, `.c`
 
-To test Python AST rules — open `test/test_python_rules.py` in the Extension Development Host.
+To test Python AST rules — open `testfiles/test_python_rules.py` in the Extension Development Host.  
+To test Java AST rules — open `testfiles/test_java_rules.java` in the Extension Development Host.
 
 ---
 
@@ -190,20 +210,22 @@ scalearch/
 │   │   ├── regexEngine.ts        # Runs all regex rules line-by-line (all languages)
 │   │   ├── astGateway.ts         # Routes to correct AST engine by language ID
 │   │   ├── jsTsAstEngine.ts      # JS/TS AST engine — @typescript-eslint/typescript-estree
-│   │   └── pythonAstEngine.ts    # Python AST engine — Python built-in ast module
+│   │   ├── pythonAstEngine.ts    # Python AST engine — Python built-in ast module (child process)
+│   │   └── javaAstEngine.ts      # Java AST engine — tree-sitter-java (native binding)
 │   │
 │   └── rules/
-│       ├── types.ts              # Shared interfaces: RuleResult, RegexRule, PythonNode
+│       ├── types.ts              # Shared interfaces: RuleResult, RegexRule, PythonNode, JavaNode
 │       ├── regexRules.ts         # Core regex rules — don't edit
 │       ├── astRules.ts           # Core JS/TS AST rules — don't edit
 │       ├── pythonAstRules.ts     # Core Python AST rules — don't edit
+│       ├── javaAstRules.ts       # Core Java AST rules — don't edit
 │       └── customRules.ts        # ← YOUR FILE. Add all new rules here
 │
-├── test/
-│   ├── test_ts_rules.ts          # Triggers every JS/TS rule
-│   ├── test_python_rules.py      # Triggers every Python rule (regex + AST)
-│   ├── test_java_rules.java      # Triggers every Java rule
-│   └── test_cpp_rules.cpp        # Triggers every C/C++ rule
+├── testfiles/                    # Test files for all languages (not shipped in extension)
+│   ├── test_ts_rules.ts
+│   ├── test_python_rules.py
+│   ├── test_java_rules.java
+│   └── test_cpp_rules.cpp
 │
 ├── package.json                  # Extension manifest, VS Code config contributions
 ├── webpack.config.js             # Bundles src/ into dist/extension.js
@@ -227,29 +249,33 @@ Your file (any supported language)
    │
    └──▶  AstGateway
             ├── JS/TS  →  JsTsAstEngine
-            │               └── @typescript-eslint/typescript-estree
+            │               └── @typescript-eslint/typescript-estree (bundled by webpack)
             │               └── SOLID + quality + CUSTOM_AST_CHECKS
             │
             ├── Python →  PythonAstEngine
-            │               └── Python built-in ast module (child process)
+            │               └── Python built-in ast module (child process, requires Python 3.8+)
             │               └── 5 Python AST rules + CUSTOM_PYTHON_AST_RULES
             │
-            ├── Java   →  JavaAstEngine  (v0.4 — planned)
-            └── C/C++  →  CppAstEngine   (v1.0 — planned)
+            ├── Java   →  JavaAstEngine
+            │               └── tree-sitter-java (native Node.js binding, no child process)
+            │               └── 13 Java AST rules + CUSTOM_JAVA_AST_RULES
+            │
+            └── C/C++  →  CppAstEngine (v3.0 — planned)
 
 Both results combined → shown as squiggly lines in VS Code
 ```
 
 ### AstGateway — adding new languages
 
-The gateway pattern means adding Java or C++ AST is one new file and one line:
+The gateway pattern means adding a new language AST engine is one new file and one line:
 
 ```typescript
 // src/engines/astGateway.ts
 this.engines = [
   { langs: ['typescript', 'javascript', ...], engine: new JsTsAstEngine() },
   { langs: ['python'],                         engine: new PythonAstEngine() },
-  // { langs: ['java'], engine: new JavaAstEngine() },  ← uncomment for v0.4
+  { langs: ['java'],                           engine: new JavaAstEngine() },
+  // { langs: ['cpp', 'c'], engine: new CppAstEngine() },  ← v3.0
 ];
 ```
 
@@ -264,7 +290,7 @@ The extension waits 600ms after you stop typing before running. This keeps it re
 > **You only ever edit `src/rules/customRules.ts`.**  
 > Core files stay untouched. Your rules are picked up automatically.
 
-The file has four clearly labelled sections.
+The file has five clearly labelled sections.
 
 ---
 
@@ -370,7 +396,6 @@ function checkPyNoPassInExcept(
   _cfg: any,
   makeDiag: any
 ): vscode.Diagnostic | null {
-  // Fire on ExceptHandler (Python's except block)
   if (node._type !== 'ExceptHandler') return null;
 
   const body = node.body ?? [];
@@ -391,7 +416,7 @@ export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
 ];
 ```
 
-**Common Python AST node types** (`_type` field):
+**Key Python node properties** (`_type`, `lineno` 1-based, `col_offset` 0-based):
 
 | Node | When it appears |
 |---|---|
@@ -404,7 +429,60 @@ export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
 | `Call` | Any function call |
 | `BinOp` | Binary operations (`+`, `-`, `*` etc.) |
 
-> **Tip:** Run `python3 -c "import ast; print(ast.dump(ast.parse('your code here')))"` to see exact node shapes for any Python code.
+> **Tip:** Run `python3 -c "import ast; print(ast.dump(ast.parse('your code here')))"` to see exact node shapes.
+
+---
+
+### Type 5 — Java AST rule
+
+**Use when:** you need Java code structure — method length, field visibility, empty catch blocks, etc.
+
+Uses tree-sitter-java — no JDK required. The function receives one tree-sitter node at a time.
+
+```typescript
+// src/rules/customRules.ts → SECTION 5
+
+export const CUSTOM_JAVA_AST_RULES: JavaRuleCheck[] = [
+  (node, _cfg, makeDiag) => {
+    if (node.type !== 'method_invocation') return null;
+
+    const obj    = node.childForFieldName('object')?.text;
+    const method = node.childForFieldName('name')?.text;
+
+    if (obj !== 'System.out' || method !== 'println') return null;
+
+    return makeDiag(
+      node,
+      'Use a logger instead of System.out.println',
+      vscode.DiagnosticSeverity.Information,
+      'custom/java-no-sysout',
+      'System.out has no log levels and cannot be disabled. Use SLF4J: logger.info("message")'
+    );
+  },
+];
+```
+
+**Key differences from Python rules — tree-sitter vs Python AST:**
+
+| Property | Python AST | Java tree-sitter |
+|---|---|---|
+| Node type | `node._type` (underscore) | `node.type` (no underscore) |
+| Line number | `node.lineno` (1-based) | `node.startPosition.row` (0-based) |
+| Node name | `node.name` (string) | `node.childForFieldName("name")?.text` |
+| Children | `node.body` (list) | `node.namedChildren` (excludes syntax tokens) |
+
+**Common Java tree-sitter node types:**
+
+| Node type | What it represents |
+|---|---|
+| `method_declaration` | Method definitions |
+| `class_declaration` | Class definitions |
+| `constructor_declaration` | Constructor definitions |
+| `catch_clause` | catch blocks in try/catch |
+| `field_declaration` | Field/property declarations |
+| `interface_declaration` | Interface definitions |
+| `method_invocation` | Any method call |
+| `binary_expression` | `a == b`, `a + b` etc. |
 
 ---
 
@@ -423,6 +501,7 @@ Users can tune thresholds in VS Code settings (`Ctrl+,` → search "ScaleArch"):
 | `scalearch.enableJava` | `true` | Enable Java regex rules |
 | `scalearch.enableCpp` | `true` | Enable C/C++ regex rules |
 | `scalearch.enablePythonAst` | `true` | Enable Python AST rules (requires Python 3.8+) |
+| `scalearch.enableJavaAst` | `true` | Enable Java AST rules (tree-sitter-java) |
 | `scalearch.pythonPath` | `""` | Custom Python executable path (auto-detected if empty) |
 | `scalearch.maxMethodsPerClass` | `10` | SRP: max methods before warning |
 | `scalearch.maxFunctionLines` | `20` | Max lines per JS/TS function |
@@ -431,6 +510,10 @@ Users can tune thresholds in VS Code settings (`Ctrl+,` → search "ScaleArch"):
 | `scalearch.maxPythonFunctionLines` | `30` | Max lines per Python function |
 | `scalearch.maxPythonClassMethods` | `10` | Max methods per Python class |
 | `scalearch.maxPythonInitAssignments` | `8` | Max `self.x =` assignments in `__init__` |
+| `scalearch.maxJavaMethodLines` | `40` | Max lines per Java method |
+| `scalearch.maxJavaClassMethods` | `10` | Max methods per Java class |
+| `scalearch.maxJavaParams` | `4` | Max parameters per Java method/constructor |
+| `scalearch.maxJavaClassFields` | `8` | Max fields per Java class |
 
 ---
 
@@ -441,7 +524,7 @@ Fork the repo, add your rules to `customRules.ts`, and open a PR.
 ### Checklist for a new rule PR
 
 - [ ] Rule added to the correct section in `customRules.ts`
-- [ ] Test case added to the relevant test file that triggers the rule
+- [ ] Test case added to the relevant test file in `testfiles/`
 - [ ] Rule added to the rules reference table in this README
 - [ ] Setting added to `package.json` if the rule has a configurable threshold
 - [ ] CHANGELOG.md updated
@@ -476,50 +559,26 @@ Your company forks ScaleArch
   category: 'code-quality',
   severity: vscode.DiagnosticSeverity.Error,
   message: 'Direct fetch() is not allowed — use HttpClient from @company/core',
-  hint: 'Our HttpClient handles auth tokens, retries, and error logging. Import: import { HttpClient } from "@company/core"',
+  hint: 'Our HttpClient handles auth tokens, retries, and error logging.',
   test: (line) => /\bfetch\s*\(/.test(line),
 },
 ```
 
 ```typescript
-// Enforce try/catch on all async functions (AST rule)
-function checkAsyncMustHaveTryCatch(node: any): RuleResult | null {
-  const fnTypes = ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'];
-  if (!fnTypes.includes(node.type) || !node.async) return null;
-  const hasTryCatch = (node.body?.body ?? []).some((s: any) => s.type === 'TryStatement');
-  if (hasTryCatch) return null;
-  return {
-    range: makeRange(node),
-    code: 'company/async-no-try-catch',
-    message: 'Async function has no try/catch — unhandled promise rejections crash the server',
-    hint: 'Company policy requires all async functions to handle errors explicitly.',
-    severity: vscode.DiagnosticSeverity.Error,
-  };
-}
+// Java: flag usage of deprecated internal API
+(node, _cfg, makeDiag) => {
+  if (node.type !== 'method_invocation') return null;
+  const obj = node.childForFieldName('object')?.text;
+  if (obj !== 'PaymentV1') return null;
+  return makeDiag(
+    node,
+    'PaymentV1 is deprecated — migrate to PaymentV2',
+    vscode.DiagnosticSeverity.Error,
+    'company/no-payment-v1',
+    'See migration guide: confluence.company.com/payment-v2'
+  );
+},
 ```
-
-### How to distribute to your team
-
-**Option A — Share as `.vsix`**
-```bash
-vsce package   # produces scalearch-x.x.x.vsix
-```
-Install via: Extensions panel → `···` menu → Install from VSIX.
-
-**Option B — Private repo**
-Fork, add rules, share repo link. Developers clone and press F5.
-
-**Option C — VS Code Marketplace**
-```bash
-vsce publish
-```
-
-### Tips for engineering leads
-
-- **Namespace rule IDs** — prefix with your company name: `company/no-raw-fetch`
-- **Link to internal docs in `hint`** — `hint: 'See: confluence.company.com/api-standards'`
-- **Use `Error` sparingly** — reserve for compliance/production-breaking issues
-- **Add test cases** for every rule in the relevant test file
 
 ---
 
@@ -530,9 +589,9 @@ vsce publish
 | v0.1.0 | JS/TS regex + AST engine | ✅ Done |
 | v1.0.0 | Python, Java, C++ regex rules | ✅ Done |
 | v1.2.0 | Python AST engine + AstGateway architecture | ✅ Done |
-| v1.4.0 | Java AST engine (tree-sitter-java) | 🔲 Planned |
-| v2.0.0 | C/C++ AST engine (tree-sitter-cpp) | 🔲 Planned |
+| v2.0.0 | Java AST engine (tree-sitter-java) — 13 rules | ✅ Done |
+| v3.0.0 | C/C++ AST engine (tree-sitter-cpp) | 🔲 Planned |
 
 ---
 
-*Built with [@typescript-eslint/typescript-estree](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/typescript-estree) for JS/TS AST parsing and Python's built-in `ast` module for Python analysis.*
+*Built with [@typescript-eslint/typescript-estree](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/typescript-estree) for JS/TS AST parsing, Python's built-in `ast` module for Python analysis, and [tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) for Java AST parsing.*
