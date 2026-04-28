@@ -15,3 +15,4 @@ src/**
 node_modules/**
 !node_modules/tree-sitter/**
 !node_modules/tree-sitter-java/**
+!node_modules/node-gyp-build/**
