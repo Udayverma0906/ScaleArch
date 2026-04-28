@@ -3,7 +3,7 @@
   "displayName": "ScaleArch",
   "publisher": "UdayVerma",
   "description": "Real-time code quality analyzer — JS/TS/Python/Java/C++ — DB, performance, security, SOLID, complexity",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "license": "MIT",
   "icon": "./assets/images/extension.png",
   "repository": {
