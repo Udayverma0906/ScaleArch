@@ -1,6 +1,7 @@
 /* eslint-disable curly */
 import * as vscode from 'vscode';
 import { PythonNode } from './types';
+import { PythonRuleCheck } from './types';
 
 // ─────────────────────────────────────────────────────
 //  Python AST Rules  (v0.3)
@@ -16,14 +17,6 @@ import { PythonNode } from './types';
 //  Return Diag  → flag this node with a squiggly line
 // ─────────────────────────────────────────────────────
 
-export type PythonRuleCheck = (
-  node:     PythonNode,
-  cfg:      vscode.WorkspaceConfiguration,
-  makeDiag: (node: PythonNode, message: string,
-             severity: vscode.DiagnosticSeverity,
-             code: string,
-             hint?: string) => vscode.Diagnostic
-) => vscode.Diagnostic | null;
 
 // ─────────────────────────────────────────────────────
 //  Rule 1 — py/ast-function-too-long
