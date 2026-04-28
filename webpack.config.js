@@ -19,13 +19,12 @@ const extensionConfig = {
     'path':          'commonjs path',
     'os':            'commonjs os',
     'crypto':        'commonjs crypto',
-    'typescript':                           'commonjs typescript',
-    '@typescript-eslint/typescript-estree': 'commonjs @typescript-eslint/typescript-estree',
-    '@typescript-eslint/project-service':   'commonjs @typescript-eslint/project-service',
-    // ── Phase 1: Java AST — tree-sitter native .node binaries CANNOT be
-    //    bundled by webpack. Must be external or extension crashes on load.
+    // ── tree-sitter native .node binaries CANNOT be bundled by webpack.
+    // Must be external + shipped in node_modules via .vscodeignore exceptions.
     'tree-sitter':      'commonjs tree-sitter',
     'tree-sitter-java': 'commonjs tree-sitter-java',
+    // NOTE: @typescript-eslint and typescript are NOT external anymore —
+    // webpack bundles them so they work in both dev and published extension.
   },
   resolve: { extensions: ['.ts', '.js'] },
   module: {
