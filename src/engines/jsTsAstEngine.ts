@@ -17,7 +17,24 @@ function cfg<T>(key: string, fallback: T): T {
   return vscode.workspace.getConfiguration('scalearch').get<T>(key, fallback);
 }
 
-// Core per-node checks. To add a rule, edit src/rules/customRules.ts only.
+// ── OutputChannel ─────────────────────────────────────────────────────────────
+let channel: vscode.OutputChannel | undefined;
+function getChannel(): vscode.OutputChannel {
+  if (!channel) channel = vscode.window.createOutputChannel('ScaleArch (JS/TS)');
+  return channel;
+}
+
+// Pre-load parser at module level — not inside analyze()
+// This ensures webpack bundles it correctly and we catch load errors early
+let tsParser: any = null;
+let parserLoadError: string | null = null;
+try {
+  tsParser = require('@typescript-eslint/typescript-estree');
+} catch (e) {
+  parserLoadError = String(e);
+}
+
+// Core per-node checks
 const PER_NODE_CHECKS = [
   checkSRP,
   checkDIP,
@@ -30,46 +47,56 @@ const PER_NODE_CHECKS = [
 
 export class JsTsAstEngine implements IAstEngine {
   analyze(document: vscode.TextDocument): vscode.Diagnostic[] {
-    // Skip entirely if SOLID and code-quality are both disabled
+    const ch = getChannel();
+    ch.appendLine(`[ScaleArch] JS/TS engine called for: ${document.fileName}`);
+
     const solidEnabled   = cfg<boolean>('enableSolid', true);
     const qualityEnabled = cfg<boolean>('enableCodeQuality', true);
-    if (!solidEnabled && !qualityEnabled) return [];
+    if (!solidEnabled && !qualityEnabled) {
+      ch.appendLine('[ScaleArch] JS/TS AST skipped — solid and quality both disabled');
+      return [];
+    }
+
+    if (!tsParser) {
+      ch.appendLine(`[ScaleArch] ERROR: @typescript-eslint/typescript-estree failed to load: ${parserLoadError}`);
+      return [];
+    }
+
+    ch.appendLine('[ScaleArch] Parser loaded ok');
 
     const source = document.getText();
     let ast: any;
 
     try {
-      const parser = require('@typescript-eslint/typescript-estree');
-      ast = parser.parse(source, {
+      ast = tsParser.parse(source, {
         loc: true,
         range: true,
         jsx: document.languageId.includes('react'),
         tolerant: true,
       });
-    } catch {
+      ch.appendLine('[ScaleArch] Parse succeeded');
+    } catch (e) {
+      ch.appendLine(`[ScaleArch] Parse failed: ${e}`);
       return [];
     }
 
     const results: RuleResult[] = [];
 
-    // Walk the entire AST once, running all per-node checks
     this.walk(ast, (node: any) => {
       for (const check of PER_NODE_CHECKS) {
         const result = check(node);
-        if (result) {
-          if (this.isResultEnabled(result.code)) {
-            results.push(result);
-          }
+        if (result && this.isResultEnabled(result.code)) {
+          results.push(result);
         }
       }
     });
 
-    // Whole-AST checks
     if (qualityEnabled) {
       results.push(...checkDuplicateStrings(ast));
       results.push(...customWholeAstChecks(ast));
     }
 
+    ch.appendLine(`[ScaleArch] JS/TS AST diagnostics: ${results.length}`);
     return results.map((r) => this.toDiagnostic(r));
   }
 
