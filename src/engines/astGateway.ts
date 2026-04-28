@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { JsTsAstEngine } from './jsTsAstEngine';
 import { PythonAstEngine } from './pythonAstEngine';
+// Phase 1: import added — engine file created in Phase 2
+import { JavaAstEngine } from './javaAstEngine';
 
 // ─────────────────────────────────────────────────────
 //  IAstEngine
 //  Every language-specific AST engine must implement
-//  this interface. AstGateway talks only to this contract
-//  — it never knows which engine it's calling.
+//  this interface. AstGateway talks only to this contract.
 // ─────────────────────────────────────────────────────
 export interface IAstEngine {
   analyze(document: vscode.TextDocument): vscode.Diagnostic[];
@@ -15,9 +16,6 @@ export interface IAstEngine {
 // ─────────────────────────────────────────────────────
 //  AstGateway
 //  Single entry point for all AST analysis.
-//  Analyzer calls gateway.analyze() — the gateway picks
-//  the right engine based on document.languageId.
-//
 //  To add a new language engine:
 //    1. Create src/engines/yourLangAstEngine.ts
 //    2. Implement IAstEngine
@@ -38,14 +36,15 @@ export class AstGateway {
         engine: new JsTsAstEngine(),
       },
       // Python — uses Python's built-in ast module (requires Python 3.8+)
-      //   v0.3: 5 AST rules (function length, class methods, docstring,
-      //         type hints, __init__ complexity)
       {
         langs:  ['python'],
         engine: new PythonAstEngine(),
       },
-      // v0.4 — Java AST via tree-sitter-java
-      // { langs: ['java'], engine: new JavaAstEngine() },
+      // Java — uses tree-sitter-java (Phase 2: engine shell + logging)
+      {
+        langs:  ['java'],
+        engine: new JavaAstEngine(),
+      },
 
       // v1.0 — C++ AST via tree-sitter-cpp (demand-dependent)
       // { langs: ['cpp', 'c'], engine: new CppAstEngine() },
