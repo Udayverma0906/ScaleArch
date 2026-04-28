@@ -1,44 +1,28 @@
 /* eslint-disable curly */
 import * as vscode from 'vscode';
 import { RegexRule, RuleResult } from './types';
-import { PythonRuleCheck } from './pythonAstRules';
+import { PythonRuleCheck } from './types';
+import { JavaRuleCheck } from './types';
 
 // ═══════════════════════════════════════════════════════════════════
 //
 //   ScaleArch — Custom Rules
-//
-//   This is YOUR file. Add rules here without touching any core files.
 //
 //   Four sections:
 //     1. CUSTOM_REGEX_RULES       — line-by-line pattern matching (all languages)
 //     2. CUSTOM_AST_CHECKS        — JS/TS structure-aware checks
 //     3. customWholeAstChecks()   — JS/TS whole-file analysis
 //     4. CUSTOM_PYTHON_AST_RULES  — Python structure-aware checks
-//
-//   The engines pick these up automatically. No other file to edit.
+//     5. CUSTOM_JAVA_AST_RULES    — Java structure-aware checks (tree-sitter)
 //
 // ═══════════════════════════════════════════════════════════════════
 
 
 // ───────────────────────────────────────────────────────────────────
 //  SECTION 1 — Custom Regex Rules
-//
-//  Each rule needs:
-//    id       → 'category/rule-name'  (unique, kebab-case)
-//    category → 'database' | 'performance' | 'solid' | 'code-quality' | 'security'
-//    severity → Error / Warning / Information / Hint
-//    message  → shown in the squiggly line tooltip
-//    hint     → longer explanation (shown on hover)
-//    test     → (line, allLines, lineIndex) => boolean
-//
-//  Return true  → flag this line
-//  Return false → skip
 // ───────────────────────────────────────────────────────────────────
 
 export const CUSTOM_REGEX_RULES: RegexRule[] = [
-
-  // ── Example: detect setTimeout with 0ms delay ──────────────────
-  // Remove or replace this with your own rules
   {
     id: 'custom/settimeout-zero',
     category: 'performance',
@@ -47,62 +31,23 @@ export const CUSTOM_REGEX_RULES: RegexRule[] = [
     hint: 'setTimeout with 0ms delay is not guaranteed to run immediately and carries scheduling overhead. Use queueMicrotask() for microtask-level scheduling or setImmediate() for I/O-bound deferral.',
     test: (line) => /setTimeout\s*\(.*,\s*0\s*\)/.test(line),
   },
-  
-
-  // ── Add your regex rules below this line ───────────────────────
-  //
-  // {
-  //   id: 'custom/your-rule-id',
-  //   category: 'code-quality',
-  //   severity: vscode.DiagnosticSeverity.Warning,
-  //   message: 'Your message here',
-  //   hint: 'Your longer explanation here.',
-  //   test: (line, allLines, lineIndex) => {
-  //     return /your-pattern/.test(line);
-  //   },
-  // },
-
 ];
 
 
 // ───────────────────────────────────────────────────────────────────
-//  SECTION 2 — Custom AST (per-node) Rules
-//
-//  Each check is a function:
-//    - receives one AST node at a time
-//    - return null   → node looks fine, skip
-//    - return result → flag this node
-//
-//  Useful node types:
-//    FunctionDeclaration / FunctionExpression / ArrowFunctionExpression
-//    ClassDeclaration / ClassExpression
-//    MethodDefinition  (a method inside a class)
-//    BlockStatement    (any { } block)
-//    IfStatement / ForStatement / WhileStatement
-//    CallExpression    (any function call)
-//    NewExpression     (new Foo())
-//    Literal           (string, number, boolean value)
-//    CatchClause       (catch block in try/catch)
-//
-//  Tip: paste your code into https://astexplorer.net
-//       (parser: @typescript-eslint/parser) to see exact node shapes.
+//  SECTION 2 — Custom AST (per-node) Rules  [JS/TS]
 // ───────────────────────────────────────────────────────────────────
 
-// Helper — builds a vscode.Range from a node's location info
 function makeRange(node: any): vscode.Range {
   const s = node.loc?.start ?? { line: 0, column: 0 };
   const e = node.loc?.end ?? { line: 0, column: 0 };
   return new vscode.Range(s.line - 1, s.column, e.line - 1, e.column);
 }
 
-// ── Example: flag empty catch blocks ───────────────────────────────
-// Remove or replace this with your own rules
 function checkEmptyCatch(node: any): RuleResult | null {
   if (node.type !== 'CatchClause') return null;
-
   const statements = node.body?.body ?? [];
   if (statements.length > 0) return null;
-
   return {
     range: makeRange(node),
     code: 'custom/empty-catch',
@@ -112,51 +57,34 @@ function checkEmptyCatch(node: any): RuleResult | null {
   };
 }
 
-// ── Example: flag boolean parameters (primitive obsession) ─────────
 function checkBooleanParam(node: any): RuleResult | null {
   const fnTypes = ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'];
   if (!fnTypes.includes(node.type)) return null;
-
   const boolParams = (node.params ?? []).filter(
     (p: any) =>
       p.type === 'AssignmentPattern' &&
       (p.right?.value === true || p.right?.value === false)
   );
-
   if (boolParams.length === 0) return null;
-
   return {
     range: makeRange(node),
     code: 'custom/boolean-param',
     message: 'Boolean parameter detected — consider using an options object or separate functions',
-    hint: 'Boolean parameters often mean a function does two things. Replace with an options object or split into two named functions: processUser(user) and processAdminUser(user).',
+    hint: 'Boolean parameters often mean a function does two things. Replace with an options object or split into two named functions.',
     severity: vscode.DiagnosticSeverity.Information,
   };
 }
 
-// ── Add your per-node check functions above this line ──────────────
-// then export them in the array below
-
 export const CUSTOM_AST_CHECKS: Array<(node: any) => RuleResult | null> = [
   checkEmptyCatch,
   checkBooleanParam,
-  // add your functions here ↓
 ];
 
 
 // ───────────────────────────────────────────────────────────────────
-//  SECTION 3 — Custom Whole-AST Rules
-//
-//  Use when you need to look at the entire file at once.
-//  Example use cases:
-//    - count total imports in a file
-//    - find all usages of a specific pattern across the file
-//    - detect repeated function names
-//
-//  Return RuleResult[] (can be empty).
+//  SECTION 3 — Custom Whole-AST Rules  [JS/TS]
 // ───────────────────────────────────────────────────────────────────
 
-// Helper — collect all nodes of given types from the AST
 function getAllNodes(node: any, types: string[]): any[] {
   const results: any[] = [];
   function walk(n: any) {
@@ -173,12 +101,10 @@ function getAllNodes(node: any, types: string[]): any[] {
   return results;
 }
 
-// ── Example: warn when a file has too many imports ─────────────────
 function checkTooManyImports(ast: any): RuleResult[] {
   const imports = getAllNodes(ast, ['ImportDeclaration']);
   const THRESHOLD = 15;
   if (imports.length <= THRESHOLD) return [];
-
   return [{
     range: makeRange(imports[0]),
     code: 'custom/too-many-imports',
@@ -188,58 +114,27 @@ function checkTooManyImports(ast: any): RuleResult[] {
   }];
 }
 
-// ── Add your whole-AST check functions above then call them below ───
-
 export function customWholeAstChecks(ast: any): RuleResult[] {
   return [
     ...checkTooManyImports(ast),
-    // ...yourWholeAstRule(ast),  ← add more here
   ];
 }
 
+
 // ───────────────────────────────────────────────────────────────────
 //  SECTION 4 — Custom Python AST Rules
-//
-//  Each check is a function with this signature:
-//    (node, cfg, makeDiag) => vscode.Diagnostic | null
-//
-//  node     — current Python AST node (_type, lineno, col_offset etc.)
-//  cfg      — VS Code workspace config (read thresholds from here)
-//  makeDiag — helper to create a Diagnostic at the node's location
-//
-//  Return null  → node is fine, skip
-//  Return Diag  → flag this node with a squiggly line
-//
-//  Useful Python node types (_type field):
-//    FunctionDef / AsyncFunctionDef  — function definitions
-//    ClassDef                        — class definitions
-//    Assign                          — x = value
-//    Return                          — return statement
-//    Import / ImportFrom             — import statements
-//    ExceptHandler                   — except block in try/except
-//    Call                            — any function call
-//
-//  Tip: run  python3 -c "import ast; print(ast.dump(ast.parse('your code')))"
-//       to see exact node shapes for your Python code.
 // ───────────────────────────────────────────────────────────────────
 
-// ── Example: flag functions that use bare string concatenation ─────
-// instead of f-strings or .format() (Python 3.6+ best practice)
-// Remove or replace with your own rules
 function checkPyStringConcat(
   node: any,
   _cfg: any,
   makeDiag: any
 ): vscode.Diagnostic | null {
-  // Look for BinOp with Add operator where either operand is a string Constant
   if (node._type !== 'BinOp') return null;
   if (node.op?._type !== 'Add') return null;
-
   const leftIsStr  = node.left?._type  === 'Constant' && typeof node.left?.value  === 'string';
   const rightIsStr = node.right?._type === 'Constant' && typeof node.right?.value === 'string';
-
   if (!leftIsStr && !rightIsStr) return null;
-
   return makeDiag(
     node,
     'String concatenation with + — prefer f-strings for readability',
@@ -248,10 +143,65 @@ function checkPyStringConcat(
   );
 }
 
-// ── Add your Python AST check functions above this line ────────────
-// then export them in the array below
-
 export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
   checkPyStringConcat,
-  // add your functions here ↓
+];
+
+
+// ───────────────────────────────────────────────────────────────────
+//  SECTION 5 — Custom Java AST Rules  (tree-sitter)
+//
+//  Each check is a function with this signature:
+//    (node, cfg, makeDiag) => vscode.Diagnostic | null
+//
+//  node     — current Java AST node (node.type, startPosition, endPosition etc.)
+//  cfg      — VS Code workspace config (read thresholds from here)
+//  makeDiag — helper to create a Diagnostic at the node's location
+//
+//  IMPORTANT differences from Python rules:
+//    node.type          (no underscore — tree-sitter)    vs node._type (Python)
+//    node.startPosition.row  (0-based)                  vs node.lineno (1-based)
+//    node.childForFieldName("name")?.text               vs node.name (Python)
+//    node.namedChildren                                 vs node.body (Python)
+//
+//  Useful Java node types (node.type field):
+//    method_declaration      — method definitions
+//    class_declaration       — class definitions
+//    catch_clause            — catch block in try/catch
+//    method_invocation       — any method call
+//    import_declaration      — import statements
+//    formal_parameters       — method parameter list
+//    block_comment           — /** Javadoc */ comments
+//
+//  Tip: run this to see node types for any Java snippet:
+//    const p = new Parser(); p.setLanguage(Java);
+//    console.log(p.parse("public class Foo {}").rootNode.toString());
+// ───────────────────────────────────────────────────────────────────
+
+const checkLogger: JavaRuleCheck = (node, _cfg, makeDiag) => {
+  if (node.type !== 'method_invocation') return null;
+
+  const obj    = node.childForFieldName('object')?.text;
+  const method = node.childForFieldName('name')?.text;
+
+  if (obj !== 'System.out' && obj !== 'System.err') return null;
+  if (method !== 'println' && method !== 'print') return null;
+
+  return makeDiag(
+    node,
+    'Use a logger instead of System.out — not suitable for production',
+    vscode.DiagnosticSeverity.Information,
+    'custom/java-no-sysout',
+    'System.out.println has no log levels, no timestamps, and cannot be disabled in production. Use SLF4J: logger.info("message") or logger.debug("value: {}", val)'
+  );
+};
+
+export const CUSTOM_JAVA_AST_RULES: JavaRuleCheck[] = [
+  // add your Java AST rule functions here ↓
+  // example:
+  // (node, cfg, makeDiag) => {
+  //   if (node.type !== 'method_declaration') return null;
+  //   return makeDiag(node, 'message', vscode.DiagnosticSeverity.Warning, 'custom/java-rule', 'hint text');
+  // },
+  checkLogger,
 ];
