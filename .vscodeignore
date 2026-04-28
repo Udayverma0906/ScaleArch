@@ -16,3 +16,5 @@ node_modules/**
 !node_modules/tree-sitter/**
 !node_modules/tree-sitter-java/**
 !node_modules/node-gyp-build/**
+!node_modules/@typescript-eslint/**
+!node_modules/typescript/**
