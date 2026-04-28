@@ -1,4 +1,3 @@
-/* eslint-disable curly */
 // ─────────────────────────────────────────────────────────────────────────────
 //  ScaleArch — Java AST Engine (Phase 2)
 //
@@ -17,9 +16,10 @@ import { CUSTOM_JAVA_AST_RULES } from '../rules/customRules';
 import { JAVA_AST_RULES } from '../rules/javaAstRules';
 
 // tree-sitter loaded via externals — not bundled by webpack
-
-import Parser from 'tree-sitter';
-import Java from 'tree-sitter-java';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Parser = require('tree-sitter');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Java   = require('tree-sitter-java');
 
 // ── OutputChannel — view in: Extension Development Host → View → Output → "ScaleArch (Java)"
 let channel: vscode.OutputChannel | undefined;
