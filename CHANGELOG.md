@@ -1,106 +1,108 @@
 # Change Log
-
 All notable changes to the "scalearch" extension will be documented in this file.
-
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [2.0.0] — Added JAVA AST Support
+---
 
-  Added support of JAva AST with support of Custom rules under section 5
-  Added 13 rules in total
+## [2.0.5] — Publishing Fixes Complete — All Engines Working
 
-## 🚀 Java AST Rules —
-
-Introduced a comprehensive set of static analysis rules for Java using AST parsing.  
-These rules improve code quality, enforce design principles, and prevent common runtime issues.
+### Fixed
+- Moved `require('@typescript-eslint/typescript-estree')` from inside `analyze()` to module level — silent `catch {}` was masking load failures on every file open
+- Added `OutputChannel` logging to `JsTsAstEngine` — JS/TS AST errors now visible in Output → ScaleArch (JS/TS)
+- JS/TS AST rules now reliably fire in the published extension
 
 ---
 
-### 🧠 Code Quality Rules
+## [2.0.4] — Webpack Bundling Fix for JS/TS AST
 
-- **java/ast-method-too-long**  
-  Flags methods exceeding the configured line threshold (default: 40).  
-  Encourages breaking large methods into smaller, maintainable units.
-
-- **java/ast-class-too-many-methods**  
-  Detects classes with excessive methods.  
-  Helps enforce the Single Responsibility Principle (SRP).
-
-- **java/ast-too-many-params**  
-  Flags methods with too many parameters (default: 4).  
-  Suggests using parameter objects or builders.
-
-- **java/ast-constructor-too-many-params**  
-  Detects constructors with excessive parameters.  
-  Recommends the Builder pattern to avoid telescoping constructors.
-
-- **java/ast-empty-catch**  
-  Flags empty catch blocks that silently swallow exceptions.  
-  Encourages proper logging or handling.
-
-- **java/ast-deep-nesting**  
-  Detects deeply nested control structures (default depth: 3).  
-  Promotes readability via early returns and method extraction.
-
-- **java/ast-too-many-fields**  
-  Flags classes with too many fields (default: 8).  
-  Indicates potential "God Object" anti-pattern.
-
-- **java/ast-magic-number**  
-  Detects hardcoded numeric literals.  
-  Encourages use of named constants for clarity.
+### Fixed
+- Removed `@typescript-eslint/typescript-estree` and `typescript` from webpack `externals` — they are now bundled directly into `dist/extension.js`
+- Previously these were marked external which worked in F5 (dev) but failed silently in the published extension because VS Code's Node.js process does not expose them
+- `extension.js` grew from 53KB → 9.58MB — expected, this is the correct size with typescript-eslint bundled
 
 ---
 
-### 🧩 Design / SOLID Rules
+## [2.0.3] — Include @typescript-eslint in vsix
 
-- **java/ast-interface-too-large**  
-  Flags interfaces with too many methods.  
-  Enforces the Interface Segregation Principle (ISP).
-
-- **java/ast-public-field**  
-  Detects public non-final fields.  
-  Encourages encapsulation using private fields with accessors.
+### Fixed
+- Added `!node_modules/@typescript-eslint/**` and `!node_modules/typescript/**` to `.vscodeignore` — JS/TS AST rules were failing silently because the published extension had no access to these modules
 
 ---
 
-### ⚠️ Reliability & Best Practices
+## [2.0.2] — Include node-gyp-build in vsix
 
-- **java/ast-system-exit**  
-  Flags usage of `System.exit()` outside the `main` method.  
-  Prevents abrupt JVM termination in production code.
-
-- **java/ast-thread-sleep**  
-  Detects usage of `Thread.sleep()`.  
-  Suggests better alternatives like `ScheduledExecutorService`.
-
-- **java/ast-string-equals-compare**  
-  Flags string comparisons using `==` or `!=`.  
-  Recommends `.equals()` or `Objects.equals()` for correctness.
+### Fixed
+- Added `!node_modules/node-gyp-build/**` to `.vscodeignore`
+- `node-gyp-build` is a runtime dependency of `tree-sitter` — missing it caused `Cannot find module 'node-gyp-build'` on activation
 
 ---
 
-### 📊 Summary
+## [2.0.1] — Fix tree-sitter not found in published extension
 
-- Total Rules: **13**
-- Categories:
-  - Code Quality: 8
-  - Design (SOLID): 2
-  - Reliability: 3
+### Fixed
+- Added `!node_modules/tree-sitter/**` and `!node_modules/tree-sitter-java/**` to `.vscodeignore`
+- Default `.vscodeignore` excluded all of `node_modules/**` — tree-sitter native `.node` binaries were not shipped in the vsix
+- Extension size corrected from 885KB → 8.16MB (includes Win/Mac/Linux tree-sitter binaries)
 
-Same way to add custom rules as we do in python AST  
+> **Root cause explained:** tree-sitter is a native module (compiled C++ `.node` binary). Webpack cannot bundle native binaries — they must be marked as `external` in `webpack.config.js` AND shipped in `node_modules` via `.vscodeignore` exceptions. The default ignore file excluded them. This is not documented clearly by VS Code or tree-sitter.
+
+---
+
+## [2.0.0] — Java AST Engine
+
+### Added
+
+- **Java AST engine** — structure-aware analysis for Java files using `tree-sitter-java`
+  - Native Node.js binding — no child process, no JDK required, synchronous parsing
+  - Works on all platforms — Windows, macOS, Linux binaries included
+  - Falls back gracefully — regex rules still fire if Java AST is disabled
+  - Toggle via `scalearch.enableJavaAst` setting
+
+- **13 Java AST rules** in `javaAstRules.ts`
+
+  **Code Quality**
+  - `java/ast-method-too-long` — method body exceeds `maxJavaMethodLines` (default 40)
+  - `java/ast-class-too-many-methods` — class has more than `maxJavaClassMethods` methods (default 10)
+  - `java/ast-too-many-params` — method has more than `maxJavaParams` parameters (default 4)
+  - `java/ast-constructor-too-many-params` — constructor has too many parameters — use Builder pattern
+  - `java/ast-empty-catch` — empty catch block silently swallows exceptions
+  - `java/ast-deep-nesting` — nesting depth exceeds threshold (default 3)
+  - `java/ast-too-many-fields` — class has more than `maxJavaClassFields` fields (default 8) — God Object
+  - `java/ast-magic-number` — hardcoded numeric literal — extract to named constant
+
+  **Design / SOLID**
+  - `java/ast-interface-too-large` — interface has more than 5 methods — ISP violation
+  - `java/ast-public-field` — public non-final field breaks encapsulation
+
+  **Reliability**
+  - `java/ast-system-exit` — `System.exit()` outside `main()` kills the entire JVM
+  - `java/ast-thread-sleep` — `Thread.sleep()` — use `ScheduledExecutorService` instead
+  - `java/ast-string-equals-compare` — string compared with `==` or `!=` — use `.equals()`
+
+- **Custom Java AST rules** — Section 5 added to `customRules.ts`
+  - `CUSTOM_JAVA_AST_RULES: JavaRuleCheck[]` — add Java AST rules without touching core files
+  - Same pattern as `CUSTOM_PYTHON_AST_RULES` in Section 4
+
+- **New VS Code settings**
+  - `scalearch.enableJavaAst` — toggle Java AST analysis (default true)
+  - `scalearch.maxJavaMethodLines` — threshold for method-too-long (default 40)
+  - `scalearch.maxJavaClassMethods` — threshold for class-too-many-methods (default 10)
+  - `scalearch.maxJavaParams` — threshold for too-many-params (default 4)
+  - `scalearch.maxJavaClassFields` — threshold for too-many-fields (default 8)
+
+- **New types** in `types.ts`
+  - `JavaNode` interface — tree-sitter node shape (type, startPosition, endPosition, namedChildren, childForFieldName)
+  - `JavaRuleCheck` type — includes `hint?` as 5th parameter from day one
 
 ---
 
 ## [1.2.2] — Fixed Standard Regex Rules
 
 ### Fixed
-  db/select rules were getting triggered for plain english. IT will now only trigger for SQL queries.
+- `db/select` rules were triggering on plain English sentences. Will now only trigger for SQL queries.
+- Hints were not showing up for all rules.
 
-## [1.2.2] — Hints fixed
-
-### Fixed
-  Hints were not showing up for all rules.
+---
 
 ## [1.2.0] — Python AST Engine
 
@@ -109,34 +111,23 @@ Same way to add custom rules as we do in python AST
   - Zero bundle cost — no native bindings, no extra dependencies
   - Requires Python 3.8+ installed on the machine (auto-detected)
   - Falls back gracefully — regex rules still fire if Python is not found
-
 - **5 Python AST rules**
   - `py/ast-function-too-long` — function body exceeds `maxPythonFunctionLines` (default 30)
   - `py/ast-class-too-many-methods` — class has more than `maxPythonClassMethods` methods (default 10)
   - `py/ast-missing-docstring` — public function or class has no docstring
   - `py/ast-no-type-hints` — function has no parameter or return type annotations
   - `py/ast-init-too-complex` — `__init__` assigns more than `maxPythonInitAssignments` instance variables (default 8)
-
 - **AstGateway architecture** — single entry point for all AST analysis, routes by language ID
   - `IAstEngine` interface — every language engine implements this contract
   - `JsTsAstEngine` — existing JS/TS engine, now implements IAstEngine
   - `PythonAstEngine` — new Python engine
   - Adding Java or C++ AST is now one new file + one line in the gateway
-
 - **Custom Python AST rules** — Section 4 added to `customRules.ts`
   - `CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[]` — add Python AST rules without touching core files
-  - Same user experience as `CUSTOM_REGEX_RULES` and `CUSTOM_AST_CHECKS`
-
-- **New VS Code settings**
-  - `scalearch.enablePythonAst` — toggle Python AST analysis on/off (default true)
-  - `scalearch.pythonPath` — set custom Python executable path (default: auto-detect)
-  - `scalearch.maxPythonFunctionLines` — threshold for function-too-long (default 30)
-  - `scalearch.maxPythonClassMethods` — threshold for class-too-many-methods (default 10)
-  - `scalearch.maxPythonInitAssignments` — threshold for init-too-complex (default 8)
 
 ### Fixed
 - `child_process` added to webpack externals — `spawnSync` now works correctly in the bundled extension
-- Python stdin forced to UTF-8 on Windows — prevents `UnicodeDecodeError` on files with non-ASCII characters in comments
+- Python stdin forced to UTF-8 on Windows — prevents `UnicodeDecodeError` on files with non-ASCII characters
 
 ---
 
@@ -144,54 +135,13 @@ Same way to add custom rules as we do in python AST
 
 ### Added
 - **Python support** — 9 regex rules covering performance, code quality, and security
-  - `py/print-in-production` — print() instead of logging module
-  - `py/new-object-in-loop` — list/dict allocation inside loops
-  - `py/bare-except` — bare except: catches KeyboardInterrupt and SystemExit
-  - `py/mutable-default-arg` — mutable default arguments shared across calls
-  - `py/broad-exception-catch` — catching generic Exception
-  - `py/assert-in-production` — assert stripped by python -O flag
-  - `py/eval-usage` — eval() security risk
-  - `py/exec-usage` — exec() security risk
-  - `py/shell-true` — subprocess shell=True injection risk
-
 - **Java support** — 8 regex rules
-  - `java/system-out-println` — use SLF4J or Log4j2 instead
-  - `java/string-concat-in-loop` — use StringBuilder instead
-  - `java/new-object-in-loop` — GC pressure from loop allocations
-  - `java/empty-catch` — silently swallowed exceptions
-  - `java/catch-generic-exception` — catching broad Exception type
-  - `java/raw-types` — List/Map/Set without generic type parameter
-  - `java/hardcoded-secret` — secrets hardcoded in string literals
-  - `java/sql-concatenation` — SQL injection via string concatenation
-
-- **C / C++ support** — 10 regex rules
-  - `cpp/cout-in-production` — use spdlog or glog instead
-  - `cpp/printf-in-production` — use logging framework instead
-  - `cpp/raw-new-without-delete` — use smart pointers instead
-  - `cpp/raw-delete` — use RAII via unique_ptr / shared_ptr
-  - `cpp/define-instead-of-const` — use constexpr or const instead
-  - `cpp/using-namespace-std` — pollutes the global namespace
-  - `cpp/c-style-cast` — use static_cast, dynamic_cast, or reinterpret_cast
-  - `cpp/gets-usage` — buffer overflow, removed in C11/C++14
-  - `cpp/strcpy-usage` — no bounds checking, use strncpy or std::string
-  - `cpp/sprintf-usage` — no bounds checking, use snprintf
-
-- **6 new universal rules** added to core rule sets
-  - `db/subquery-in-clause` — IN (SELECT ...) performance issue
-  - `db/delete-without-where` — wipes entire table
-  - `db/update-without-where` — updates every row
-  - `perf/await-in-loop` — runs promises serially, use Promise.all()
-  - `security/hardcoded-ip` — hardcoded IP addresses
-  - `security/console-log-sensitive` — logging passwords, tokens, secrets
-
-- **New VS Code settings** to enable/disable language-specific rule groups
-  - `scalearch.enablePython`
-  - `scalearch.enableJava`
-  - `scalearch.enableCpp`
+- **C/C++ support** — 10 regex rules
+- **6 new universal rules** — subquery-in-clause, delete/update-without-where, await-in-loop, hardcoded-ip, console-log-sensitive
 
 ### Fixed
-- C/C++ `#define` rules were silently skipped — regex engine treated `#` as a comment character for all languages. C/C++ preprocessor directives are now correctly processed.
-- `java/string-concat-in-loop` never fired — pattern only matched string literals after `+=`, not variables. Now catches all `+=` assignments inside loops.
+- C/C++ `#define` rules were silently skipped — regex engine treated `#` as a comment character
+- `java/string-concat-in-loop` never fired — pattern only matched string literals after `+=`
 
 ---
 
@@ -199,29 +149,11 @@ Same way to add custom rules as we do in python AST
 
 ### Added
 - **Regex engine** — line-by-line pattern matching for TypeScript and JavaScript
-  - 8 database rules — SELECT *, missing WHERE/LIMIT, N+1 queries, SQL injection patterns
-  - 5 performance rules — sync fs calls, JSON.parse in loops, object allocation in loops
-  - 4 security rules — hardcoded secrets, eval(), hardcoded IPs, sensitive logging
-
-- **AST engine** — structure-aware analysis for TypeScript and JavaScript only
-  - `solid/srp` — class with too many methods (configurable threshold)
-  - `solid/dip` — constructor instantiating concrete dependencies
-  - `quality/function-too-long` — function exceeds line threshold
-  - `quality/high-complexity` — cyclomatic complexity above threshold
-  - `quality/deep-nesting` — nesting depth above threshold
-  - `quality/too-many-params` — function parameter count above threshold
-  - `quality/duplicate-string` — same string literal repeated 4+ times
-
+  - 8 database rules, 5 performance rules, 4 security rules
+- **AST engine** — structure-aware analysis for TypeScript and JavaScript
+  - `solid/srp`, `solid/dip`, `quality/function-too-long`, `quality/high-complexity`
+  - `quality/deep-nesting`, `quality/too-many-params`, `quality/duplicate-string`
 - **Custom rules support** via `src/rules/customRules.ts`
-  - `CUSTOM_REGEX_RULES[]` — add regex rules without touching core files
-  - `CUSTOM_AST_CHECKS[]` — add AST per-node checks
-  - `customWholeAstChecks()` — add whole-file AST analysis
-
 - **VS Code settings** for all rule groups and thresholds
-  - `scalearch.enableDatabase`, `enablePerformance`, `enableSecurity`
-  - `scalearch.enableSolid`, `enableCodeQuality`
-  - `scalearch.maxFunctionLines`, `maxParams`, `maxMethodsPerClass`
-  - `scalearch.maxCyclomaticComplexity`, `maxNestingDepth`
-
-- Keyboard shortcut `Ctrl+Shift+A` / `Cmd+Shift+A` to run analysis manually
-- Analysis runs automatically 600ms after you stop typing
+- Keyboard shortcut `Ctrl+Shift+A` / `Cmd+Shift+A`
+- Auto-analysis 600ms after you stop typing
