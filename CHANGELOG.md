@@ -3,6 +3,95 @@
 All notable changes to the "scalearch" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+
+## [2.0.0] — Added JAVA AST Support
+
+  Added support of JAva AST with support of Custom rules under section 5
+  Added 13 rules in total
+
+## 🚀 Java AST Rules —
+
+Introduced a comprehensive set of static analysis rules for Java using AST parsing.  
+These rules improve code quality, enforce design principles, and prevent common runtime issues.
+
+---
+
+### 🧠 Code Quality Rules
+
+- **java/ast-method-too-long**  
+  Flags methods exceeding the configured line threshold (default: 40).  
+  Encourages breaking large methods into smaller, maintainable units.
+
+- **java/ast-class-too-many-methods**  
+  Detects classes with excessive methods.  
+  Helps enforce the Single Responsibility Principle (SRP).
+
+- **java/ast-too-many-params**  
+  Flags methods with too many parameters (default: 4).  
+  Suggests using parameter objects or builders.
+
+- **java/ast-constructor-too-many-params**  
+  Detects constructors with excessive parameters.  
+  Recommends the Builder pattern to avoid telescoping constructors.
+
+- **java/ast-empty-catch**  
+  Flags empty catch blocks that silently swallow exceptions.  
+  Encourages proper logging or handling.
+
+- **java/ast-deep-nesting**  
+  Detects deeply nested control structures (default depth: 3).  
+  Promotes readability via early returns and method extraction.
+
+- **java/ast-too-many-fields**  
+  Flags classes with too many fields (default: 8).  
+  Indicates potential "God Object" anti-pattern.
+
+- **java/ast-magic-number**  
+  Detects hardcoded numeric literals.  
+  Encourages use of named constants for clarity.
+
+---
+
+### 🧩 Design / SOLID Rules
+
+- **java/ast-interface-too-large**  
+  Flags interfaces with too many methods.  
+  Enforces the Interface Segregation Principle (ISP).
+
+- **java/ast-public-field**  
+  Detects public non-final fields.  
+  Encourages encapsulation using private fields with accessors.
+
+---
+
+### ⚠️ Reliability & Best Practices
+
+- **java/ast-system-exit**  
+  Flags usage of `System.exit()` outside the `main` method.  
+  Prevents abrupt JVM termination in production code.
+
+- **java/ast-thread-sleep**  
+  Detects usage of `Thread.sleep()`.  
+  Suggests better alternatives like `ScheduledExecutorService`.
+
+- **java/ast-string-equals-compare**  
+  Flags string comparisons using `==` or `!=`.  
+  Recommends `.equals()` or `Objects.equals()` for correctness.
+
+---
+
+### 📊 Summary
+
+- Total Rules: **13**
+- Categories:
+  - Code Quality: 8
+  - Design (SOLID): 2
+  - Reliability: 3
+
+Same way to add custom rules as we do in python AST  
+
+---
+
 ## [1.2.2] — Fixed Standard Regex Rules
 
 ### Fixed
