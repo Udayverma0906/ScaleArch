@@ -178,7 +178,7 @@ export const CUSTOM_PYTHON_AST_RULES: PythonRuleCheck[] = [
 //    console.log(p.parse("public class Foo {}").rootNode.toString());
 // ───────────────────────────────────────────────────────────────────
 
-const checkLogger: JavaRuleCheck = (node, _cfg, makeDiag) => {
+const checkNoSysout: JavaRuleCheck = (node, _cfg, makeDiag) => {
   if (node.type !== 'method_invocation') return null;
 
   const obj    = node.childForFieldName('object')?.text;
@@ -197,11 +197,6 @@ const checkLogger: JavaRuleCheck = (node, _cfg, makeDiag) => {
 };
 
 export const CUSTOM_JAVA_AST_RULES: JavaRuleCheck[] = [
-  // add your Java AST rule functions here ↓
-  // example:
-  // (node, cfg, makeDiag) => {
-  //   if (node.type !== 'method_declaration') return null;
-  //   return makeDiag(node, 'message', vscode.DiagnosticSeverity.Warning, 'custom/java-rule', 'hint text');
-  // },
-  checkLogger,
+  // add your Java AST rule const name here ↓
+  checkNoSysout,
 ];
