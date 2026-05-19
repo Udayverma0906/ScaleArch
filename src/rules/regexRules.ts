@@ -147,13 +147,25 @@ export const PERF_RULES: RegexRule[] = [
     severity: vscode.DiagnosticSeverity.Warning,
     message: 'Object/array created inside a loop — GC pressure',
     hint: 'Allocate outside the loop and reuse or clear per iteration to reduce garbage collection overhead.',
-    test: (line, allLines, idx) => {
-      if (!/(new\s+\w+\(|\[\s*\]|\{\s*\})/.test(line)) return false;
-      for (let i = Math.max(0, idx - 3); i < idx; i++) {
-        if (/\b(for|while|forEach)\b/.test(allLines[i])) return true;
-      }
+test: (line, allLines, idx) => {
+  if (!/(new\s+\w+\s*\(|\[\s*\]|\{\s*\})/.test(line)) return false;
+
+  const getIndent = (s: string) => s.match(/^(\s*)/)?.[1]?.length ?? 0;
+  const currentIndent = getIndent(line);
+
+  for (let i = idx - 1; i >= Math.max(0, idx - 8); i--) {
+    const prevLine = allLines[i];
+    const prevIndent = getIndent(prevLine);
+
+    if (prevIndent < currentIndent && /\b(for|while|forEach|map|filter|reduce)\b/.test(prevLine)) {
+      return true;
+    }
+    if (prevIndent <= currentIndent && /^\s*\}/.test(prevLine)) {
       return false;
-    },
+    }
+  }
+  return false;
+},
   },
   {
     id: 'perf/await-in-loop',

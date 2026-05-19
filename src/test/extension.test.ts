@@ -25,7 +25,6 @@ import * as child_process from 'child_process';
 class OrderRepository {}
 class FileLogger {}
 
-
 // ════════════════════════════════════════════════════
 //  DATABASE RULES
 // ════════════════════════════════════════════════════
